@@ -142,16 +142,14 @@ as.strategy.data.frame <- function(x) {
 #' `2001-01-01`=structure((-1)^(1:10), names=letters[1:10]))
 #' PORT2 <- list(`2000-01-01`=structure(1:20, names=letters[7:26]),
 #' `2001-01-01`=structure(sin(1:10), names=letters[11:20]))
-#' x <- as.sos(list(p1=PORT1, p2=PORT2))
-#' x2 <- as.sos(list(PORT1, PORT2))
+#' x0 <- as.sos(p1=PORT1, p2=PORT2)
+#' x1 <- as.sos(PORT1)
+#' x2 <- as.sos(PORT1, PORT2)
 #' @export
 #'
-as.sos <- function(data){
+as.sos <- function(...){
   # attempts to capture the case where input is a strategy
-  if (any(c('data.frame', 'matrix', 'strategy') %in% class(data))){
-    data <- list(data)
-  }
-  stopifnot('list' %in% class(data))
+  data <- list(...)
   data %<>% lapply(as.strategy)
   strategies_names <- names(data)
   ctr <- 1
