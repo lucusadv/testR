@@ -1,0 +1,137 @@
+---
+title: "Backtest Basics"
+author: "Giuseppe A.Paleologo"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  \usepackage[utf8]{inputenc}
+---
+## Overview
+
+The package supports the transformation, and analysis of times series of portfolios. It comprises three groups of functions/methods. 
+
+* A "grammar" of strategies to group strategies, combine them (much like the assets of a portfolio), transform them (e.g., beta neutralizing, or taking the long positions), subset them by date, extract them, and summarize their basic features. 
+
+* A function to compute the raw returns of an individual strategies, possibly inclusive of borrow costs and average transaction costs. 
+
+* Several functions that perform calculations on returns. These functions generate summary performance tables and charts.
+
+## Creation
+The primitive element a strategy is a portfolio, which is just a numeric vector. The element of the vector are the holdings; the names of the vector elements are asset ids. Something like this qualifies:
+```{r}
+(p1 <- structure(rnorm(4), names=c('IBM', 'T', 'AAPL')))
+```
+Multiple portfolios make up a strategy, once they are associated to dates:
+```{r include=FALSE, cache=FALSE}
+library(testR)
+```
+
+```{r}
+x1 <- list(
+  `2000-01-01`=structure(1:20, names=letters[1:20]),
+  `2001-01-01`=structure((-1)^(1:10), names=letters[1:10])
+)
+x2 <- list(
+  `2000-01-01`=structure(1:20, names=letters[7:26]),
+  `2001-01-01`=structure(sin(1:10), names=letters[11:20])
+)
+```
+These are not strategies yet, just reprentations of strategies. To turn them into strategy objects:
+```{r}
+S1 <- as.strategy(x1)
+S2 <- as.strategy(x2) 
+```
+They can be turned into strategies also from other representations, namely matrices and data frames:
+```{r}
+x1_m <- l2m(x1)
+head(x1_m)
+x1_df <- x1_m %>% 
+  melt %>% 
+  na.omit %T>% 
+  {names(.) <- c('date','asset', 'value')}
+# The column names do not have to be date, asset, value, but their order needs to be.
+head(x1_df)
+# S1a is identical to S2a and to S1
+# from matrix
+S1a <- as.strategy(x1_m)
+# from data frame
+S1b <- as.strategy(x1_df)
+```
+Individual strategies can be combined in sets of strategy (`sos`) objects. These are can then be used for simultaneous backtests, reports and plots. The inclusion
+```{r}
+x1 <- as.sos(str1=S1)
+x2 <- as.sos(str1=S1,str2=S2)
+```
+names can be changed using the setter method
+```{r}
+names(x2) <-c('first', 'second')
+```
+and both strategies and sos objects can be summarized:
+```{r}
+summary(x2)
+summary(S1a)
+```
+## Mutation
+
+The strategies can be mutated:
+```{r}
+x3 <- as.sos(str1=S1) %>%
+  mutate(str3=2*str1, str4=long(str1)) %>% 
+  mutate(str5=3*str3)
+```
+It is also possible to add a list of strategies to a sos object. A similar function (`add_strategy_all`) is added for use with dotted arguments, for consistency with dplyr:
+```{r}
+x4 <- add_strategy_list(x3, list(str6=2*x3$str1, str7=dollar_neutral.strategy(x3$str1, bench_id='spy')))
+```
+The following operations act of portfolios `+`, `-`, `*`, `/` sum/subtract/multiply/divide two strategies holding- and date- wise or a strategy and a scalar. In addition, the following unary functions are available: `trunc(strategy)`, `ceiling(strategy)`, `round(strategy, digits)`, which extend the element-wise operations.
+
+A number of utility functions make manipulation easier: `long(strategy)` and `short(strategy)` take the long and short sides of the portfolio respectively; `dollarneutral(strategy, benchmark_id)` and `betaneutral(strategy, beta_matrix, benchmark_id)` perform dollar neutralization and beta neutralization of the portfolios in the strategy; this requires a loadings matrix and a corresponding asset id for which returns are available. Additional functions may be added in the future (e.g., to hedge a portfolio against all known factors).
+
+## Filtering and Selection
+
+Since the sop object is also a list of lists (the individual strategies), it inherits the usual list methods. For example, the list of strategies can be obtained with `names(sop_object)`, and an individual strategy can be accessed with `$`: `x3$str1`. A portfolio and a specific holding can be accessed as
+```{r}
+x3$str1$`2000-01-01`
+x3$str1$`2000-01-01`['a']  #for the latter, $ won't work, because portfolios are vectors
+```
+There is also a chainable `get_strat` verb:
+```{r}
+x3 %>% get_strat('str1', 'str2')
+```
+Analogously to data.frames and dplyr, there is a `subset` method to select dates of strategies in the set of strategies, based on a boolean condition:
+```{r}
+x2 %>% filter(date <= '2000-01-01')
+```
+
+## Calculation
+
+The function `backtest(STRAT, RETS, shortfall=0, borrow=0)` is the workhorse of computation. It generates a time series of returns on gmv, a time series of returns on gmv adjusted for market impact and borrow costs, a time series of turnover, and an optional strategy object in which the portfolios of the original strategy have i) been compounded by the asset returns in between rebalancing dates and ii) been scaled so that gross market value of portfolio immediately before a rebalancing equals that after.
+```{r}
+set.seed(314)
+data(RETS)
+asset_id <- colnames(RETS)
+dates <- structure(row.names(RETS), names=row.names(RETS))
+# # generates a random strategy
+str <- lapply(dates, function(x) structure(rnorm(500), names=sample(asset_id, 500, replace=FALSE))) %>%
+  as.strategy
+STRAT <- as.sos(strategy1=str, strategy2=long(str))
+# 
+# v <- backtest(STRAT, RETS)
+# names(v)
+```
+
+## Reporting
+
+Reporting is performed using either standard ggplot syntax, or with extensible functions `make_report_list` and `make_report_all`. These are higher-functions that take a variable number of functions as arguments. These functions are applied to each return series of the original strategies, and the results are collated in a table. Some of these functions may depend on the package financieRaid. Below is an example computing Sharpe Ratio, Max_drawdown, and alpha and betas.  
+```{r, warning = FALSE, error =FALSE, fig.width = 7, fig.height = 4}
+# library(financieRaid)
+# plotts(v$ret, cumulative = T, geometric = T)
+# spy <- getSPY()
+# # partial application of benchmark and country
+# compute_alphabeta_US <- function(rets) compute_alphabeta(rets, spy, '')
+# 
+# make_report_list(v$ret, compute_sharpe , compute_alphabeta_US, compute_drawdown)
+```
+
