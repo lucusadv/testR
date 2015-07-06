@@ -773,3 +773,58 @@ rademacher <- function(X=NULL, n=1e4L, delta=1e-3, period=12){
   estim <- apply(X_norm,2,mean)*scaling_factor
   list(SR=estim, bound=bestbound)
 }
+
+
+#' Converts a matrix of subjects/observations to a Markov transition matrix
+#'
+#' The conversion follows the ideas of Stochastic Neighbor Embedding; see the
+#' the papers by Hinton and Roweis, "Stochastic Neighbor Embedding", and Van Der
+#' Maaten and Hinton, " Visualizing data using t-SNE". The basic formula is
+#' given by:
+#' p(j | i) = exp(-gamma * |x_j - x_i|^2)/ sum_k exp(-gamma * |x_k - x_i|^2)
+#'
+#' optimal width by requiring that the conditional gaussian conditional entropy
+#' be identical across points. Let:
+#' H_gamma_i(i) = - sum_k p(k | i) * log(p(k |i))
+#' H_0 = log(N) H_infty = 0
+#' Then when set gamma_i so that, for all i, exp(H_gamma_i(i))) = perplexity
+#'
+#' @param X matrix of observations rows are points, columns are coordinates
+#' @param perplexity numeric
+#' @return matrix, transition probability with X[i,j] =p(j|i)
+#' 
+SNEmbed <- function(X, perplexity=30){
+  perplexity_log <- log(perplexity)
+  n <- nrow(X)
+  e <- matrix(rep(1, n), ncol=1)
+  Y <- X %*% t(X)
+  v <- matrix(diag(Y),ncol=1)
+  W <- v %*% t(e)
+  DIST <- W  + t(W) - 2*Y
+  gamma_min <- matrix(rep(0, n), ncol=1)
+  DIST_median <- median(DIST)
+  gamma_max <- matrix(20, nrow=n,ncol=1)
+  tol <- 1e-5
+  D <- exp(-DIST/DIST_median)
+  # vectorized bisection method
+  .fn <- function(g){
+    (D ^ (g %*% t(e))) %>%
+    {. / ( rowSums(.) %*% t(e) - 1)} %>%
+    {-rowSums(. * log(.)) - perplexity_log}
+  }
+  obj_value <- rep(1, n)
+  stopifnot(all(.fn(gamma_max) < 0))
+  stopifnot(all(.fn(gamma_min) > 0))
+  # browser()
+  while (max(abs(obj_value)) > tol) {
+    message(max(abs(obj_value)))
+    gamma_test <- 0.5*(gamma_min + gamma_max)
+    obj_value <- .fn(gamma_test)
+    gamma_min <- ifelse(obj_value > 0, gamma_test, gamma_min)
+    gamma_max <- ifelse(obj_value < 0, gamma_test, gamma_max)
+  }
+  (D ^ (gamma_test %*% t(e))) %>%
+  {. / ( rowSums(.) %*% t(e) - 1)} %>%
+  {diag(.) <- 0; .}
+}
+
