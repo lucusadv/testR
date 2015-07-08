@@ -2,7 +2,7 @@
 % Please edit documentation in R/main.R
 \name{compute_gmv.strategy}
 \alias{compute_gmv.strategy}
-\title{compute gmv for a strategy}
+\title{Computes gmv for a strategy.}
 \usage{
 \method{compute_gmv}{strategy}(strat)
 }
@@ -13,6 +13,6 @@
 a vector of gmvs
 }
 \description{
-compute gmv for a strategy
+Computes gmv for a strategy.
 }
 

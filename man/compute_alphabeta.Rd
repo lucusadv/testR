@@ -2,7 +2,7 @@
 % Please edit documentation in R/main.R
 \name{compute_alphabeta}
 \alias{compute_alphabeta}
-\title{computes alphas and betas of a strategy with respect to a benchmark}
+\title{Computes alphas and betas of a strategy with respect to a benchmark.}
 \usage{
 compute_alphabeta(rets, benchmark, country = "US")
 }
@@ -17,6 +17,6 @@ compute_alphabeta(rets, benchmark, country = "US")
 data frame, alpha and beta of the strategy
 }
 \description{
-computes alphas and betas of a strategy with respect to a benchmark
+Computes alphas and betas of a strategy with respect to a benchmark.
 }
 

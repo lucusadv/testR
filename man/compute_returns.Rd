@@ -2,9 +2,9 @@
 % Please edit documentation in R/main.R
 \name{compute_returns}
 \alias{compute_returns}
-\title{computes average annual returns for a time series of returns}
+\title{Computes average annual returns for a time series of returns.}
 \usage{
-compute_returns(r, startDate = NULL, endDate = NULL)
+compute_returns(r, startDate = NULL, endDate = NULL, country = "US")
 }
 \arguments{
 \item{startDate}{character, earliest date, if specified}
@@ -17,6 +17,6 @@ compute_returns(r, startDate = NULL, endDate = NULL)
 data frame, annual returns
 }
 \description{
-computes average annual returns for a time series of returns
+Computes average annual returns for a time series of returns.
 }
 

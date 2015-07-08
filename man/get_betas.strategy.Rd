@@ -2,7 +2,7 @@
 % Please edit documentation in R/main.R
 \name{get_betas.strategy}
 \alias{get_betas.strategy}
-\title{Betas of a strategy}
+\title{Betas of a strategy.}
 \usage{
 \method{get_betas}{strategy}(.data, BETA)
 }
@@ -15,6 +15,6 @@
 a vector
 }
 \description{
-Betas of a strategy
+Betas of a strategy.
 }
 

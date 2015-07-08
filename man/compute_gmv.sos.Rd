@@ -2,7 +2,7 @@
 % Please edit documentation in R/main.R
 \name{compute_gmv.sos}
 \alias{compute_gmv.sos}
-\title{compute gmv for a set of strategies}
+\title{Computes gmv for a set of strategiesr.}
 \usage{
 \method{compute_gmv}{sos}(X)
 }
@@ -13,6 +13,6 @@
 a matrix of gross market values; rows are dates, columns are strategies
 }
 \description{
-compute gmv for a set of strategies
+Computes gmv for a set of strategiesr.
 }
 

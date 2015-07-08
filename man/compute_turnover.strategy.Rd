@@ -2,7 +2,7 @@
 % Please edit documentation in R/main.R
 \name{compute_turnover.strategy}
 \alias{compute_turnover.strategy}
-\title{Compute returns for a strategy}
+\title{Computes returns for a strategy.}
 \usage{
 \method{compute_turnover}{strategy}(X)
 }
@@ -13,6 +13,6 @@
 matrix with turnover per period
 }
 \description{
-Compute returns for a strategy
+Computes returns for a strategy.
 }
 

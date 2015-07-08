@@ -2,7 +2,7 @@
 % Please edit documentation in R/main.R
 \name{dollar_neutral.strategy}
 \alias{dollar_neutral.strategy}
-\title{Dollar-neutral version of a strategy}
+\title{Dollar-neutral version of a strategy.}
 \usage{
 dollar_neutral.strategy(.data, bench_id)
 }
@@ -15,6 +15,6 @@ dollar_neutral.strategy(.data, bench_id)
 strategy
 }
 \description{
-Dollar-neutral version of a strategy
+Dollar-neutral version of a strategy.
 }
 

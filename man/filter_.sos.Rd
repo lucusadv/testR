@@ -2,7 +2,7 @@
 % Please edit documentation in R/main.R
 \name{filter_.sos}
 \alias{filter_.sos}
-\title{Filter portfolios in a sos object by date (safe hatch)}
+\title{Filter portfolios in a sos object by date (safe hatch).}
 \usage{
 \method{filter_}{sos}(.data, .dots)
 }
@@ -12,6 +12,6 @@
 \item{...}{expressions using the variable date, returning a boolean}
 }
 \description{
-Filter portfolios in a sos object by date (safe hatch)
+Filter portfolios in a sos object by date (safe hatch).
 }
 

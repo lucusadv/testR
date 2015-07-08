@@ -18,6 +18,7 @@ Depends:
     scales,
     lazyeval,
     reshape2,
+		stringr,
     Gmisc
 License: GPL v.2
 Suggests: knitr

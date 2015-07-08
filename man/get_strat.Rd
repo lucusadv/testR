@@ -2,7 +2,7 @@
 % Please edit documentation in R/main.R
 \name{get_strat}
 \alias{get_strat}
-\title{Selects portfolios in a sos object (safe hatch)}
+\title{Selects portfolios in a sos object (safe hatch).}
 \usage{
 get_strat(.data, ...)
 }
@@ -12,6 +12,6 @@ get_strat(.data, ...)
 \item{data}{a set of strategies (sos) object}
 }
 \description{
-Selects portfolios in a sos object (safe hatch)
+Selects portfolios in a sos object (safe hatch).
 }
 

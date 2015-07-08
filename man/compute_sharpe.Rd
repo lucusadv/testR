@@ -2,7 +2,7 @@
 % Please edit documentation in R/main.R
 \name{compute_sharpe}
 \alias{compute_sharpe}
-\title{computes Sharpe Ratio for a set of returns, assuming iid returns}
+\title{Computes Sharpe Ratio for a set of returns, assuming iid returns.}
 \usage{
 compute_sharpe(r, period = 1, volAdjPeriod = NULL, startDate = NULL,
   endDate = NULL)
@@ -23,7 +23,7 @@ vol estimates of window volAdjPeriod centered at the return}
 numeric, sharpe ratio computed as mean(r)/sd(r)*sqrt(period)
 }
 \description{
-computes Sharpe Ratio for a set of returns, assuming iid returns
+Computes Sharpe Ratio for a set of returns, assuming iid returns.
 }
 \author{
 G.A.Paleologo

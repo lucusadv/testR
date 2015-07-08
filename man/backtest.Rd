@@ -2,7 +2,7 @@
 % Please edit documentation in R/main.R
 \name{backtest}
 \alias{backtest}
-\title{compute returns for a set of strategies and turnover}
+\title{Computes returns for a set of strategies and turnover.}
 \usage{
 backtest(X, RETS, shortfall = 0, borrow = 0)
 }
@@ -15,6 +15,6 @@ backtest(X, RETS, shortfall = 0, borrow = 0)
 list of performance objects
 }
 \description{
-compute returns for a set of strategies and turnover
+Computes returns for a set of strategies and turnover.
 }
 

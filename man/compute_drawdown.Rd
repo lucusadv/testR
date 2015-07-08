@@ -2,7 +2,7 @@
 % Please edit documentation in R/main.R
 \name{compute_drawdown}
 \alias{compute_drawdown}
-\title{Computes maximum drawdown}
+\title{Computes maximum drawdown.}
 \usage{
 compute_drawdown(r, startDate = NULL, endDate = NULL)
 }
@@ -18,6 +18,6 @@ a data frame containing drawdown, its start
 and end dates
 }
 \description{
-Computes maximum drawdown
+Computes maximum drawdown.
 }
 

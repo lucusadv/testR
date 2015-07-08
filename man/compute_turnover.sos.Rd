@@ -2,7 +2,7 @@
 % Please edit documentation in R/main.R
 \name{compute_turnover.sos}
 \alias{compute_turnover.sos}
-\title{Compute returns for a set of strategies}
+\title{Computes returns for a set of strategies.}
 \usage{
 \method{compute_turnover}{sos}(X)
 }
@@ -13,6 +13,6 @@
 matrix with turnover per period
 }
 \description{
-Compute returns for a set of strategies
+Computes returns for a set of strategies.
 }
 

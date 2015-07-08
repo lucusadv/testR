@@ -12,7 +12,7 @@ vignette: >
 
 The package supports the transformation, and analysis of times series of portfolios. It comprises three groups of functions/methods. 
 
-* A "grammar" of strategies to group strategies, combine them (much like the assets of a portfolio), transform them (e.g., beta neutralizing, or taking the long positions), subset them by date, extract them, and summarize their basic features. 
+* A "grammar" of strategies which allows the user to group strategies, combine them (much like the assets of a portfolio), transform them (e.g., beta neutralizing, or taking the long positions), subset them by date, extract them, and summarize their basic features. 
 
 * A function to compute the raw returns of an individual strategies, possibly inclusive of borrow costs and average transaction costs. 
 
@@ -43,23 +43,28 @@ These are not strategies yet, just reprentations of strategies. To turn them int
 S1 <- as.strategy(x1)
 S2 <- as.strategy(x2) 
 ```
-They can be turned into strategies also from other representations, namely matrices and data frames:
+They can be turned into strategies also from other representations, namely matrices and data frames. First, let's convert our strategy to a matrix:
 ```{r}
 x1_m <- l2m(x1)
 head(x1_m)
+```
+and to a data frame:
+```{r}
 x1_df <- x1_m %>% 
   melt %>% 
   na.omit %T>% 
   {names(.) <- c('date','asset', 'value')}
-# The column names do not have to be date, asset, value, but their order needs to be.
+# The column names do not have to be date, asset, value, but their order needs to be date-asset-value.
 head(x1_df)
-# S1a is identical to S2a and to S1
+```
+Here are the conversions matrix -> strategy and data frame -> strategy. Note that `S1a` is identical to `S2a` and to S1:
+````{r}
 # from matrix
 S1a <- as.strategy(x1_m)
 # from data frame
 S1b <- as.strategy(x1_df)
 ```
-Individual strategies can be combined in sets of strategy (`sos`) objects. These are can then be used for simultaneous backtests, reports and plots. The inclusion
+Individual strategies can be combined in set-of-strategy (`sos`) objects. These are can then be used for simultaneous backtests, reports and plots. The inclusion
 ```{r}
 x1 <- as.sos(str1=S1)
 x2 <- as.sos(str1=S1,str2=S2)
@@ -81,13 +86,13 @@ x3 <- as.sos(str1=S1) %>%
   mutate(str3=2*str1, str4=long(str1)) %>% 
   mutate(str5=3*str3)
 ```
-It is also possible to add a list of strategies to a sos object. A similar function (`add_strategy_all`) is added for use with dotted arguments, for consistency with dplyr:
+It is also possible to add a list of strategies to a `sos` object. A similar function (`add_strategy_all`) is added for use with dotted arguments, for consistency with dplyr:
 ```{r}
 x4 <- add_strategy_list(x3, list(str6=2*x3$str1, str7=dollar_neutral.strategy(x3$str1, bench_id='spy')))
 ```
-The following operations act of portfolios `+`, `-`, `*`, `/` sum/subtract/multiply/divide two strategies holding- and date- wise or a strategy and a scalar. In addition, the following unary functions are available: `trunc(strategy)`, `ceiling(strategy)`, `round(strategy, digits)`, which extend the element-wise operations.
+The following operations act on portfolios: `+`, `-`, `*`, `/` i.e., sum/subtract/multiply/divide two strategies holding- and date- wise or a strategy and a scalar. In addition, the following unary functions are available: `trunc(strategy)`, `ceiling(strategy)`, `round(strategy, digits)`, which extend the element-wise operations.
 
-A number of utility functions make manipulation easier: `long(strategy)` and `short(strategy)` take the long and short sides of the portfolio respectively; `dollarneutral(strategy, benchmark_id)` and `betaneutral(strategy, beta_matrix, benchmark_id)` perform dollar neutralization and beta neutralization of the portfolios in the strategy; this requires a loadings matrix and a corresponding asset id for which returns are available. Additional functions may be added in the future (e.g., to hedge a portfolio against all known factors).
+A number of utility functions make manipulation easier: `long(strategy)` and `short(strategy)` take the long and short sides of the portfolio respectively; `dollarneutral(strategy, benchmark_id)` and `betaneutral(strategy, beta_matrix, benchmark_id)` perform dollar neutralization and beta neutralization of the portfolios in the strategy, by adding to each portfolio a benchmark holding so that the resulting portfolio is either dollar-neutral or beta-neutral; this requires a loadings matrix and a corresponding asset id for which returns are available. Additional functions may be added in the future (e.g., to partially hedge a portfolio against a set of factors).
 
 ## Filtering and Selection
 

@@ -187,12 +187,12 @@ add_strategy_all <- function(data, ...){
 #' object.
 #'
 #' @param data set of strategies (sos) object
-#' @param X, a list of objects taht can be converted into strategies
+#' @param X, a list of objects that can be converted into strategies
 #' @return a sos object
 #' @export
 #'
 add_strategy_list <- function(data, X){
-  X %<>% as.sos
+  class(X) <- c('sos', 'list')
   strategies_names <- names(X)
   ctr <- 1
   if (is.null(strategies_names)) strategies_names <- rep('', length(data))

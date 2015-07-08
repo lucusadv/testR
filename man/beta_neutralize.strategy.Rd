@@ -2,7 +2,7 @@
 % Please edit documentation in R/main.R
 \name{beta_neutralize.strategy}
 \alias{beta_neutralize.strategy}
-\title{Beta-neutral version of a strategy}
+\title{Beta-neutral version of a strategy.}
 \usage{
 \method{beta_neutralize}{strategy}(.data, BETA, bench_id)
 }
@@ -17,6 +17,6 @@
 strategy
 }
 \description{
-Beta-neutral version of a strategy
+Beta-neutral version of a strategy.
 }
 
