@@ -2,7 +2,7 @@
 % Please edit documentation in R/main.R
 \name{mutate_.sos}
 \alias{mutate_.sos}
-\title{Adds portfolios to a sos objects (safe hatch)}
+\title{Adds portfolios to a sos objects (safe hatch).}
 \usage{
 \method{mutate_}{sos}(.data, .dots)
 }
@@ -15,6 +15,6 @@
 a sos object
 }
 \description{
-Adds portfolios to a sos objects (safe hatch)
+Adds portfolios to a sos objects (safe hatch).
 }
 

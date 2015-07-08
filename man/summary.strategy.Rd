@@ -2,7 +2,7 @@
 % Please edit documentation in R/main.R
 \name{summary.strategy}
 \alias{summary.strategy}
-\title{summarizes a strategy}
+\title{Summarizes a strategy.}
 \usage{
 \method{summary}{strategy}(data)
 }
@@ -13,6 +13,6 @@
 a data frame with strategy name, first date, last date, n.dates, min no.assets, max no.assets, avg no.assets
 }
 \description{
-summarizes a strategy
+Summarizes a strategy.
 }
 

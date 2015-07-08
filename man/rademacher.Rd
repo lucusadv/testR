@@ -2,7 +2,7 @@
 % Please edit documentation in R/main.R
 \name{rademacher}
 \alias{rademacher}
-\title{Rademacher complexity}
+\title{Rademacher complexity.}
 \usage{
 rademacher(X = NULL, n = 10000L, delta = 0.001, period = 12)
 }
@@ -19,6 +19,6 @@ Column names must not be empty}
 a list with estimates and best bound
 }
 \description{
-Rademacher complexity
+Rademacher complexity.
 }
 

@@ -2,7 +2,7 @@
 % Please edit documentation in R/main.R
 \name{select_.sos}
 \alias{select_.sos}
-\title{selects portfolios in a sos object by date (safe hatch)}
+\title{selects portfolios in a sos object by date (safe hatch).}
 \usage{
 \method{select_}{sos}(.data, .dots)
 }
@@ -12,6 +12,6 @@
 \item{...}{unquoted names of strategies}
 }
 \description{
-selects portfolios in a sos object by date (safe hatch)
+selects portfolios in a sos object by date (safe hatch).
 }
 

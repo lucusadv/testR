@@ -2,7 +2,7 @@
 % Please edit documentation in R/main.R
 \name{*.strategy}
 \alias{*.strategy}
-\title{Multiplies two portfolios, or a strategy and a scalar}
+\title{Multiplies two portfolios, or a strategy and a scalar.}
 \usage{
 \method{*}{strategy}(x, y)
 }
@@ -15,6 +15,6 @@
 strategy
 }
 \description{
-Multiplies two portfolios, or a strategy and a scalar
+Multiplies two portfolios, or a strategy and a scalar.
 }
 

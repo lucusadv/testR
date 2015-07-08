@@ -2,7 +2,7 @@
 % Please edit documentation in R/main.R
 \name{summary.sos}
 \alias{summary.sos}
-\title{summarizes a set of strategies}
+\title{Summarizes a set of strategies.}
 \usage{
 \method{summary}{sos}(X)
 
@@ -19,8 +19,8 @@ a data frame with strategy name, first date, last date, n.dates, min no.assets, 
 a data frame with summary satistics
 }
 \description{
-summarizes a set of strategies
+Summarizes a set of strategies.
 
-Summary of a set of strategy object
+Summarizes a set-of-strategies object.
 }
 

@@ -2,7 +2,7 @@
 % Please edit documentation in R/main.R
 \name{make_report_list}
 \alias{make_report_list}
-\title{Make a summary report table}
+\title{Makes a summary report table.}
 \usage{
 make_report_list(data, ...)
 }
@@ -12,6 +12,6 @@ make_report_list(data, ...)
 \item{...}{functions operating of a time series of returns}
 }
 \description{
-Make a summary report table
+Makes a summary report table.
 }
 

@@ -2,7 +2,7 @@
 % Please edit documentation in R/main.R
 \name{+.strategy}
 \alias{+.strategy}
-\title{Sums two strategy objects}
+\title{Sums two strategy objects.}
 \usage{
 \method{+}{strategy}(x, y)
 }
@@ -15,6 +15,6 @@
 strategy
 }
 \description{
-Sums two strategy objects
+Sums two strategy objects.
 }
 
