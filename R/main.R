@@ -42,10 +42,8 @@ get_betas <- function(x, y) UseMethod("get_betas")
 
   turnover <- structure(rep(0, nrow(R)), names=dtes)
   for (d in dtes){
-    v <- R[d, ] + 1
-    v[is.na(v)] <- 1
     if (d %in% names(PORT)) {
-      tmp_portfolio <- opVectors(work_portfolio[[d]], v, FUN=`*`)
+      tmp_portfolio <- work_portfolio[[d]]
       scaling_factor <- ifelse(d > dtes_start, sum(abs(tmp_portfolio))/sum(abs(PORT[[d]])), 1)
       work_portfolio[[d]] <- scaling_factor * PORT[[d]]
       turnover[d] <- sum(abs(opVectors(work_portfolio[[d]], tmp_portfolio, FUN=`-`))) / sum(abs(tmp_portfolio))
@@ -675,7 +673,8 @@ compute_drawdown <- function(r, startDate=NULL, endDate=NULL){
 
 #' Computes Sharpe Ratio for a set of returns, assuming iid returns.
 #'
-#' @param r numeric, returns
+#' @param rets numeric, vector of returns, element names are dates in format
+#'   YYYY-MM-DD
 #' @param period numeric, average interval between return data
 #' @param volAdjPeriod integer or NULL, if integer the returns are normalized by
 #'   vol estimates of window volAdjPeriod centered at the return
@@ -684,16 +683,16 @@ compute_drawdown <- function(r, startDate=NULL, endDate=NULL){
 #' @author G.A.Paleologo
 #' @return numeric, sharpe ratio computed as mean(r)/sd(r)*sqrt(period)
 #' @export
-compute_sharpe <- function(r, period=1, volAdjPeriod=NULL,
+compute_sharpe <- function(rets, period=1, volAdjPeriod=NULL,
                            startDate=NULL, endDate=NULL){
   if (!is.null(volAdjPeriod)){
-    r <- zoo(r, as.Date(names(r)))
-    r <- rollapply(r, volAdjPeriod, function(x)
+    rets <- zoo(rets, as.Date(names(rets)))
+    rets <- rollapply(rets, volAdjPeriod, function(x)
       x[floor(length(x))/2]/sd(x, na.rm=T), align='center')
   }
-  if (!is.null(startDate)) r <- r[names(r) >= startDate]
-  if (!is.null(endDate)) r <- r[names(r) <= startDate]
-  SR <- (mean(r, na.rm=TRUE) / sd(r, na.rm=TRUE) * sqrt(252/period)) %>% round(2)
+  if (!is.null(startDate)) rets <- rets[names(rets) >= startDate]
+  if (!is.null(endDate)) rets <- rets[names(rets) <= startDate]
+  SR <- (mean(rets, na.rm=TRUE) / sd(rets, na.rm=TRUE) * sqrt(252/period)) %>% round(2)
   if (is.null(volAdjPeriod)){
     out <- data.frame(Sharpe=SR, row.names=NULL)
   } else  {
@@ -702,15 +701,57 @@ compute_sharpe <- function(r, period=1, volAdjPeriod=NULL,
   out
 }
 
+#' Computes monthly returns of a strategy. Works only with daily backtests
+#'
+#' @param rets numeric, vector of returns, element names are dates in format
+#'   YYYY-MM-DD
+#' @return data frame, return of the strategy by year-month
+#' @export
+compute_returns_monthly <- function(rets){
+  dtes_returns <- names(rets) %>%
+    ensure_that(!any(duplicated(.), err_desc = 'duplicated dates')) %>%
+    as.Date %>% diff %>% as.numeric %>%
+    ensure_that(max(.) <= 4, err_desc = 'returns do not appear to be daily')
+  rets %>% v2df(c('date','ret')) %>%
+    mutate(date=substr(date,1,7)) %>%
+    dplyr::group_by(date) %>%
+    dplyr::summarize(nobs = length(ret), ret=prod(ret+1) - 1) %>%
+    ensure_that(mean(nobs) >= 4, err_desc = 'fewer than 4 returns per month') %>%
+    {x <- data.frame(matrix(.$ret, nrow=1)); names(x) <- .$date;x}
+}
+
+#' Computes annual returns of a strategy. It is stronly recommended that this be
+#' run on daily backtests, although the function will run on monthly backtests.
+#'
+#' @param rets numeric, vector of returns, element names are dates in format
+#'   YYYY-MM-DD
+#' @return data frame, return of the strategy by year
+#' @export
+compute_returns_yearly <- function(rets, country='US'){
+  dtes_returns <- names(rets) %>%
+    ensure_that(!any(duplicated(.), err_desc = 'duplicated dates')) %>%
+    as.Date %>% diff %>% as.numeric %>%
+    ensure_that(max(.) <= 22, err_desc = 'returns do not appear to be monthly')
+  rets %>% v2df(c('date','ret')) %>%
+    mutate(date=substr(date, 1, 4)) %>%
+    dplyr::group_by(date) %>%
+    dplyr::summarize(nobs = length(ret), ret=prod(ret+1)-1) %>%
+    {x <- data.frame(matrix(.$ret, nrow=1)); names(x) <- .$date; x}
+}
+
 
 #' Computes alphas and betas of a strategy with respect to a benchmark.
 #'
-#' @param rets numeric, returns
+#' @param rets numeric, vector of returns, element names are dates in format #'   YYYY-MM-DD
 #' @param benchmark numeric, time series of benchmarks
 #' @param country character, country
 #' @return data frame, alpha and beta of the strategy
 #' @export
 compute_alphabeta <- function(rets, benchmark, country='US'){
+  dtes_returns <- names(rets) %>%
+    ensure_that(!any(duplicated(.), err_desc = 'duplicated dates')) %>%
+    as.Date %>% diff %>% as.numeric %>%
+    ensure_that(max(.) <= 4, err_desc = 'returns do not appear to be daily')
   benchmark %<>% v2df(c('date', 'benchmark'))
   rets %<>% v2df(c('date','ret'))
   A <- left_join(rets, benchmark, by='date') %>%
@@ -722,9 +763,9 @@ compute_alphabeta <- function(rets, benchmark, country='US'){
   data.frame(alpha = round(tmp[1]*252/period*100,2), beta = round(tmp[2], 2), row.names=FALSE)
 }
 
-#' Computes average annual returns for a time series of returns.
+#' Computes average annualized returns for a time series of returns.
 #'
-#' @param rets numeric, returns
+#' @param rets numeric, vector of returns, element names are dates in format #'   YYYY-MM-DD
 #' @param startDate character, earliest date, if specified
 #' @param endDate character, latest date, if specified
 #' @return data frame, annual returns
@@ -792,7 +833,7 @@ rademacher <- function(X=NULL, n=1e4L, delta=1e-3, period=12){
 #' @param X matrix of observations rows are points, columns are coordinates
 #' @param perplexity numeric
 #' @return matrix, transition probability with X[i,j] =p(j|i)
-#' 
+#'
 SNEmbed <- function(X, perplexity=30){
   perplexity_log <- log(perplexity)
   n <- nrow(X)
@@ -827,4 +868,192 @@ SNEmbed <- function(X, perplexity=30){
   {. / ( rowSums(.) %*% t(e) - 1)} %>%
   {diag(.) <- 0; .}
 }
+
+
+
+
+#' Estimates the trailing volatility of a return matrix. Exponential weighting. 
+#' 
+#' @param R matrix, asset returns
+#' @param halflife numeric, half-life in weighting returns
+#' @return a matrix of estimated volatilities
+#'   
+#' @author G.A.Paleologo
+#' @export
+estimate_volatility <- function(R, VOLT=NULL, halflife=126, country='US'){
+  lambda <- 1-1/halflife
+  dtes <- getDates(R)
+  alldtes <- getTD(country=country)
+  dte_interval <- (alldtes %in% dtes) %>% which %>% diff %>% mean
+  if (dte_interval > 1.01) warning('return data do not appear to be daily.')
+  ESTIMATE <- R^2
+  ESTIMATE[1,] <- median(ESTIMATE[1,], na.rm=TRUE) # median x-sec vol
+  for (i in 2:nrow(ESTIMATE)){
+    message('estimating volatility for date ', dtes[i])
+    ESTIMATE[i, ] <- ifelse(is.na(ESTIMATE[i, ]) , ESTIMATE[i-1, ], (1-lambda)*ESTIMATE[i, ] + lambda*ESTIMATE[i-1, ])  
+  }
+  ESTIMATE <- sqrt(ESTIMATE * 252/dte_interval) 
+  ESTIMATE[is.na(R)] <- NA_real_
+  # The last steps tapers new observations
+  ESTIMATE <-  ( tail(ESTIMATE, -5) + 
+                   tail(head(ESTIMATE, -1), -4) + 
+                   tail(head(ESTIMATE, -2), -3) + 
+                   tail(head(ESTIMATE, -3), -2) +
+                   tail(head(ESTIMATE, -4), -1) +
+                   head(ESTIMATE, -5)    ) / 5
+  ESTIMATE
+}
+
+#' Estimates the trailing mean of a return matrix. Exponential weighting. 
+#'
+#' 
+#' @param R matrix, asset returns
+#' @param halflife numeric, half-life in weighting returns
+#' @return a matrix of setimated mean
+#'   
+#' @author G.A.Paleologo
+#' @export
+estimate_mean <- function(R, MEAN=NULL, halflife=126, country='US'){
+  lambda <- 1-1/halflife
+  dtes <- getDates(R)
+  alldtes <- getTD(country=country)
+  dte_interval <- (alldtes %in% dtes) %>% which %>% diff %>% mean
+  if (dte_interval > 1.01) warning('return data do not appear to be daily.')
+  ESTIMATE <- R
+  ESTIMATE[1,] <- 0
+  for (i in 2:nrow(ESTIMATE)){
+#     message('estimating mean for date ', dtes[i])
+    ESTIMATE[i, ] <- ifelse(is.na(ESTIMATE[i, ]) , ESTIMATE[i-1, ], (1-lambda)*ESTIMATE[i, ] + lambda*ESTIMATE[i-1, ])  
+  }
+  ESTIMATE <- ESTIMATE * 252/dte_interval
+  ESTIMATE[is.na(R)] <- NA_real_
+  # The last steps tapers new observations
+  ESTIMATE <-  ( tail(ESTIMATE, -5) + 
+                   tail(head(ESTIMATE, -1), -4) + 
+                   tail(head(ESTIMATE, -2), -3) + 
+                   tail(head(ESTIMATE, -3), -2) +
+                   tail(head(ESTIMATE, -4), -1) +
+                   head(ESTIMATE, -5)    ) / 5
+  ESTIMATE
+}
+
+#' Estimates the trailing beta of a return matrix  
+#' 
+#' 
+#' @param R matrix, asset returns
+#' @param BETA matrix, existing beta matrix. If NULL, the matrix is estimated
+#'   from scratch; otherwise only dates following the latest date in BETA are
+#'   estimated.
+#' @param halflife numeric, half-life in weighting returns
+#' @param width numeric, window width used for estimation
+#' @param bench_id character, id of the benchmark
+#' @return a matrix
+#'   
+#' @author G.A.Paleologo
+#' @export
+estimate_beta <- function(R, BETA=NULL, halflife=126, width=253, bench_id="78462F103"){
+  w <- exp(-(width:1)/halflife)
+  R_dates <- getDates(R)
+  if (!is.null(BETA)){ 
+    beta_dates <- R_dates[R_dates > max(getDates(BETA))]
+  } else {
+    beta_dates <- tail(R_dates, -63) # at least three months of data
+  }
+  # this has nrows = ( n_dates - halflife) 
+  BETA_est <- array(NA_real_, 
+                    dim=c(length(beta_dates), ncol(R)), 
+                    dimnames= list(date = beta_dates, id=colnames(R))) 
+  bench_R <- R[, bench_id] 
+  # this function returns the index range prior to date d
+  validInterval <- function(d){
+    i <- which(R_dates == d) - 1
+    j <- max(i-width + 1, 1)
+    i:j
+  }
+  for (d in beta_dates){ 
+    message(Sys.time(), ': estimating beta for date ', d)
+    ind <- validInterval(d)
+    width_effective <- length(ind)
+    w_temp <- w[( width - width_effective + 1 ):width]
+    R_temp <- R[ind,]
+    bench_R_temp <- bench_R[ind]
+    var_bench_temp <- sum(w_temp * bench_R_temp^2, na.rm=TRUE) / sum(w_temp*!is.na(bench_R_temp))
+    BETA_est[d, ] <- apply(R_temp, 2, function(x) {
+      tmp <- w_temp * x * bench_R_temp
+      sum(tmp, na.rm = T) / sum( w_temp * !is.na(tmp))
+      }) / var_bench_temp
+  }
+  # smooths BETA over 5 days to reduce impact of new observations
+  BETA_est <-  ( tail(BETA_est, -5) + 
+    tail(head(BETA_est, -1), -4) + 
+    tail(head(BETA_est, -2), -3) + 
+    tail(head(BETA_est, -3), -2) +
+    tail(head(BETA_est, -4), -1) +
+         head(BETA_est, -5)    ) / 5
+  if (!is.null(BETA)){
+    BETA_est <- overlay(BETA, BETA_est)
+  }
+  BETA_est
+}
+
+#' Estimates the trailing beta of a return matrix with a parallel calculation.
+#' Still experimental and subject to change.
+#' 
+#' 
+#' @param R matrix, asset returns
+#' @param BETA matrix, existing beta matrix. If NULL, the matrix is estimated 
+#'   from scratch; otherwise only dates following the latest date in BETA are 
+#'   estimated.
+#' @param halflife numeric, half-life in weighting returns
+#' @param bench_id character, id of the benchmark
+#' @return a matrix
+#'   
+#' @author G.A.Paleologo
+#' @export
+estimate_beta_par <- function(R, BETA=NULL, halflife=126, width=253, bench_id="78462F103"){
+  f <- require(parallel)
+  if (!f) stop('parallel is not enabled or installed on this system')
+  A <- list()
+  n_steps <- floor(nrow(R)/10)
+  for (i in 1:20){
+    ind <- max(1, (i-1)*n_steps - 80):min(1 + i*n_steps, nrow(R))
+    if ( (i-1)*n_steps - 80 > nrow(R)) break
+    A[[i]] <- R[ind,]
+  }
+  beta_partial <- mclapply(A, 
+                           estimate_beta, 
+                           halflife = halflife, 
+                           width = width, 
+                           bench_id = bench_id, 
+                           mc.preschedule = FALSE)
+  BETA <- accumulate(beta_partial, all.dim=c(TRUE, TRUE))
+  BETA  
+}
+
+# unused function in the absence of a risk model
+riskDecomp <- function(dte, 
+                       portfolio,
+                       model = 'AXUS3',
+                       type = c('MH', 'MH-S', 'MH-M'),
+                       workDir = file.path(getOption('axiomaus'),'AxiomaRiskModels-FlatFiles'),
+                       cacheDir = file.path(getOption('axiomaus'),'AxiomaRiskModels-Rdata'),
+                       idtable = file.path(getOption('stockdir'), 'cusip.ticker.Rdata')){
+  B <- getAxioma(dte, model = model, type = type, workDir = workDir, cacheDir = cacheDir, idtable = idtable)
+  Omega <- getAxiomaCov(dte, model = model, type = type, workDir = workDir, cacheDir = cacheDir)
+  D <- getAxiomaFld(dte, model = model, type = type, field = "SpecificRisk", workDir = workDir, cacheDir = cacheDir, idtable = idtable)
+  cusips <- names(portfolio)
+  EXP <- portfolio %*% B[cusips, ]
+  D <- D[cusips]
+  IDIOVAR <- sum((portfolio*D)^2)
+  FACTVAR <- (matrix(EXP, nrow=1) %*% Omega %*% matrix(EXP, ncol=1))[,] 
+  TOTVAR <- FACTVAR + IDIOVAR
+  PERCIDIO <- IDIOVAR/TOTVAR
+  STYLEVAR <- (matrix(EXP[, 1:11], nrow=1) %*% Omega[1:11,1:11] %*% matrix(EXP[,1:11], ncol=1))[,] 
+  INDUSTRYVAR <- (matrix(EXP[, -(1:11)], nrow=1) %*% Omega[-(1:11), -(1:11)] %*% matrix(EXP[, -(1:11)], ncol=1))[,] 
+  SINGLEFACVAR <- (EXP[]^2 *diag(Omega))[,] 
+  list(PERCIDIO = PERCIDIO, TOTVAR = TOTVAR, IDIOVAR = IDIOVAR, 
+       FACTVAR = FACTVAR, STYLEVAR = STYLEVAR, INDUSTRYVAR = INDUSTRYVAR, 
+       SINGLEFACVAR = SINGLEFACVAR)
+}
+
 
