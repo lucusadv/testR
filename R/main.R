@@ -701,21 +701,46 @@ compute_sharpe <- function(rets, period=1, volAdjPeriod=NULL,
   out
 }
 
+#' Computes monthly hit rate of a strategy. Works only with daily backtests
+#'
+#' @param rets numeric, vector of returns, element names are dates in format
+#'   YYYY-MM-DD
+#' @return data frame, hit rate of the strategy by year-month
+#' @export
+compute_hitrate_monthly <- function(rets){
+  rets %>% sign %>% compute_returns_monthly(geometric=FALSE) %>% {(. + 1)/2}
+}
+
+#' Computes monthly hit rate of a strategy. Works only with daily backtests
+#'
+#' @param rets numeric, vector of returns, element names are dates in format
+#'   YYYY-MM-DD
+#' @return data frame, return of the strategy by year-month
+#' @export
+compute_hitrate_yearly <- function(rets){
+  rets %>% sign %>% compute_returns_yearly(geometric=FALSE) %>% {(. + 1)/2}
+}
+
 #' Computes monthly returns of a strategy. Works only with daily backtests
 #'
 #' @param rets numeric, vector of returns, element names are dates in format
 #'   YYYY-MM-DD
 #' @return data frame, return of the strategy by year-month
 #' @export
-compute_returns_monthly <- function(rets){
+compute_returns_monthly <- function(rets, geometric = TRUE){
+  if (geometric) {
+    compounder <- function(x) prod(x + 1) - 1
+  } else {
+    compounder <- sum
+  }
   dtes_returns <- names(rets) %>%
     ensure_that(!any(duplicated(.), err_desc = 'duplicated dates')) %>%
     as.Date %>% diff %>% as.numeric %>%
     ensure_that(max(.) <= 4, err_desc = 'returns do not appear to be daily')
   rets %>% v2df(c('date','ret')) %>%
-    mutate(date=substr(date,1,7)) %>%
+    mutate(date=substr(date,1 , 7)) %>%
     dplyr::group_by(date) %>%
-    dplyr::summarize(nobs = length(ret), ret=prod(ret+1) - 1) %>%
+    dplyr::summarize(nobs = length(ret), ret=compounder(ret)) %>%
     ensure_that(mean(nobs) >= 4, err_desc = 'fewer than 4 returns per month') %>%
     {x <- data.frame(matrix(.$ret, nrow=1)); names(x) <- .$date;x}
 }
@@ -727,7 +752,12 @@ compute_returns_monthly <- function(rets){
 #'   YYYY-MM-DD
 #' @return data frame, return of the strategy by year
 #' @export
-compute_returns_yearly <- function(rets, country='US'){
+compute_returns_yearly <- function(rets, geometric = TRUE){
+  if (geometric) {
+    compounder <- function(x) prod(x + 1) - 1
+  } else {
+    compounder <- sum
+  }
   dtes_returns <- names(rets) %>%
     ensure_that(!any(duplicated(.), err_desc = 'duplicated dates')) %>%
     as.Date %>% diff %>% as.numeric %>%
@@ -735,7 +765,7 @@ compute_returns_yearly <- function(rets, country='US'){
   rets %>% v2df(c('date','ret')) %>%
     mutate(date=substr(date, 1, 4)) %>%
     dplyr::group_by(date) %>%
-    dplyr::summarize(nobs = length(ret), ret=prod(ret+1)-1) %>%
+    dplyr::summarize(nobs = length(ret), ret=compounder) %>%
     {x <- data.frame(matrix(.$ret, nrow=1)); names(x) <- .$date; x}
 }
 

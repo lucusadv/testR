@@ -2,7 +2,7 @@
 % Please edit documentation in R/main.R
 \name{compute_returns}
 \alias{compute_returns}
-\title{Computes average annual returns for a time series of returns.}
+\title{Computes average annualized returns for a time series of returns.}
 \usage{
 compute_returns(r, startDate = NULL, endDate = NULL, country = "US")
 }
@@ -11,12 +11,12 @@ compute_returns(r, startDate = NULL, endDate = NULL, country = "US")
 
 \item{endDate}{character, latest date, if specified}
 
-\item{rets}{numeric, returns}
+\item{rets}{numeric, vector of returns, element names are dates in format #'   YYYY-MM-DD}
 }
 \value{
 data frame, annual returns
 }
 \description{
-Computes average annual returns for a time series of returns.
+Computes average annualized returns for a time series of returns.
 }
 

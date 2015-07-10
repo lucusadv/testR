@@ -4,11 +4,12 @@
 \alias{compute_sharpe}
 \title{Computes Sharpe Ratio for a set of returns, assuming iid returns.}
 \usage{
-compute_sharpe(r, period = 1, volAdjPeriod = NULL, startDate = NULL,
+compute_sharpe(rets, period = 1, volAdjPeriod = NULL, startDate = NULL,
   endDate = NULL)
 }
 \arguments{
-\item{r}{numeric, returns}
+\item{rets}{numeric, vector of returns, element names are dates in format
+YYYY-MM-DD}
 
 \item{period}{numeric, average interval between return data}
 

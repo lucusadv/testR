@@ -10,7 +10,7 @@
 
 <meta name="author" content="Giuseppe A.Paleologo" />
 
-<meta name="date" content="2015-04-28" />
+<meta name="date" content="2015-07-10" />
 
 <title>Backtest Basics</title>
 
@@ -54,20 +54,25 @@ code > span.er { color: #ff0000; font-weight: bold; }
 <div id="header">
 <h1 class="title">Backtest Basics</h1>
 <h4 class="author"><em>Giuseppe A.Paleologo</em></h4>
-<h4 class="date"><em>2015-04-28</em></h4>
+<h4 class="date"><em>2015-07-10</em></h4>
 </div>
 
 
 <div id="overview" class="section level2">
 <h2>Overview</h2>
-<p>The package supports the creation, transformation, analysis of backtests of strategies. It comprises three groups of functions/methods. First, a “grammar” of strategies to group strategies, combine them (much like the assets of a portfolio), transform them (e.g., beta neutralizing, or taking the long positions), subset them by date, extract them, and summarize their basic features. Second, a function to compute the raw returns of an individual strategies, possibly inclusive of borrow costs and average transaction costs. Third and last, function that perform calculations on returns. These functions generate summary performance tables and charts.</p>
+<p>The package supports the transformation, and analysis of times series of portfolios. It comprises three groups of functions/methods.</p>
+<ul>
+<li><p>A “grammar” of strategies which allows the user to group strategies, combine them (much like the assets of a portfolio), transform them (e.g., beta neutralizing, or taking the long positions), subset them by date, extract them, and summarize their basic features.</p></li>
+<li><p>A function to compute the raw returns of an individual strategies, possibly inclusive of borrow costs and average transaction costs.</p></li>
+<li><p>Several functions that perform calculations on returns. These functions generate summary performance tables and charts.</p></li>
+</ul>
 </div>
 <div id="creation" class="section level2">
 <h2>Creation</h2>
 <p>The primitive element a strategy is a portfolio, which is just a numeric vector. The element of the vector are the holdings; the names of the vector elements are asset ids. Something like this qualifies:</p>
 <pre class="sourceCode r"><code class="sourceCode r">(p1 &lt;-<span class="st"> </span><span class="kw">structure</span>(<span class="kw">rnorm</span>(<span class="dv">4</span>), <span class="dt">names=</span><span class="kw">c</span>(<span class="st">'IBM'</span>, <span class="st">'T'</span>, <span class="st">'AAPL'</span>)))</code></pre>
-<pre><code>##        IBM          T       AAPL       &lt;NA&gt; 
-##  1.2501280  1.2783516  0.8554971 -0.2660848</code></pre>
+<pre><code>##         IBM           T        AAPL        &lt;NA&gt; 
+##  1.80397951 -0.01203376 -0.85956226  1.08223599</code></pre>
 <p>Multiple portfolios make up a strategy, once they are associated to dates:</p>
 <pre class="sourceCode r"><code class="sourceCode r">x1 &lt;-<span class="st"> </span><span class="kw">list</span>(
   <span class="st">`</span><span class="dt">2000-01-01</span><span class="st">`</span>=<span class="kw">structure</span>(<span class="dv">1</span>:<span class="dv">20</span>, <span class="dt">names=</span>letters[<span class="dv">1</span>:<span class="dv">20</span>]),
@@ -80,17 +85,18 @@ x2 &lt;-<span class="st"> </span><span class="kw">list</span>(
 <p>These are not strategies yet, just reprentations of strategies. To turn them into strategy objects:</p>
 <pre class="sourceCode r"><code class="sourceCode r">S1 &lt;-<span class="st"> </span><span class="kw">as.strategy</span>(x1)
 S2 &lt;-<span class="st"> </span><span class="kw">as.strategy</span>(x2) </code></pre>
-<p>They can be turned into strategies also from other representations, namely matrices and data frames:</p>
+<p>They can be turned into strategies also from other representations, namely matrices and data frames. First, let’s convert our strategy to a matrix:</p>
 <pre class="sourceCode r"><code class="sourceCode r">x1_m &lt;-<span class="st"> </span><span class="kw">l2m</span>(x1)
 <span class="kw">head</span>(x1_m)</code></pre>
 <pre><code>##             a b  c d  e f  g h  i  j  k  l  m  n  o  p  q  r  s  t
 ## 2000-01-01  1 2  3 4  5 6  7 8  9 10 11 12 13 14 15 16 17 18 19 20
 ## 2001-01-01 -1 1 -1 1 -1 1 -1 1 -1  1 NA NA NA NA NA NA NA NA NA NA</code></pre>
+<p>and to a data frame:</p>
 <pre class="sourceCode r"><code class="sourceCode r">x1_df &lt;-<span class="st"> </span>x1_m %&gt;%<span class="st"> </span>
 <span class="st">  </span>melt %&gt;%<span class="st"> </span>
 <span class="st">  </span>na.omit %T&gt;%<span class="st"> </span>
 <span class="st">  </span>{<span class="kw">names</span>(.) &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">'date'</span>,<span class="st">'asset'</span>, <span class="st">'value'</span>)}
-<span class="co"># The column names do not have to be date, asset, value, but their order needs to be.</span>
+<span class="co"># The column names do not have to be date, asset, value, but their order needs to be date-asset-value.</span>
 <span class="kw">head</span>(x1_df)</code></pre>
 <pre><code>##         date asset value
 ## 1 2000-01-01     a     1
@@ -99,19 +105,21 @@ S2 &lt;-<span class="st"> </span><span class="kw">as.strategy</span>(x2) </code>
 ## 4 2001-01-01     b     1
 ## 5 2000-01-01     c     3
 ## 6 2001-01-01     c    -1</code></pre>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># S1a is identical to S2a to S1</span>
+<p>Here are the conversions matrix -&gt; strategy and data frame -&gt; strategy. Note that <code>S1a</code> is identical to <code>S2a</code> and to S1:</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># from matrix</span>
 S1a &lt;-<span class="st"> </span><span class="kw">as.strategy</span>(x1_m)
+<span class="co"># from data frame</span>
 S1b &lt;-<span class="st"> </span><span class="kw">as.strategy</span>(x1_df)</code></pre>
-<p>Individual strategies can be combined in sets of strategy objects. These are can then be used for simultaneous backtests, reports and plots. The inclusion</p>
+<p>Individual strategies can be combined in set-of-strategy (<code>sos</code>) objects. These are can then be used for simultaneous backtests, reports and plots. The inclusion</p>
 <pre class="sourceCode r"><code class="sourceCode r">x1 &lt;-<span class="st"> </span><span class="kw">as.sos</span>(<span class="dt">str1=</span>S1)
 x2 &lt;-<span class="st"> </span><span class="kw">as.sos</span>(<span class="dt">str1=</span>S1,<span class="dt">str2=</span>S2)</code></pre>
 <p>names can be changed using the setter method</p>
 <pre class="sourceCode r"><code class="sourceCode r"><span class="kw">names</span>(x2) &lt;-<span class="kw">c</span>(<span class="st">'first'</span>, <span class="st">'second'</span>)</code></pre>
 <p>and both strategies and sos objects can be summarized:</p>
 <pre class="sourceCode r"><code class="sourceCode r"><span class="kw">summary</span>(x2)</code></pre>
-<pre><code>##   strategy first_date  last_date mean_nassets max_nassets max_nassets.1
-## 1    first 2000-01-01 2001-01-01           15          20            10
-## 2   second 2000-01-01 2001-01-01           15          20            10</code></pre>
+<pre><code>##   strategy first_date  last_date mean_nassets min_nassets max_nassets
+## 1    first 2000-01-01 2001-01-01           15          10          20
+## 2   second 2000-01-01 2001-01-01           15          10          20</code></pre>
 <pre class="sourceCode r"><code class="sourceCode r"><span class="kw">summary</span>(S1a)</code></pre>
 <pre><code>##        start        end no.dates min.no.assets max.no.assets avg.no.assets
 ## 1 2000-01-01 2001-01-01        2            10            20            15</code></pre>
@@ -122,10 +130,10 @@ x2 &lt;-<span class="st"> </span><span class="kw">as.sos</span>(<span class="dt"
 <pre class="sourceCode r"><code class="sourceCode r">x3 &lt;-<span class="st"> </span><span class="kw">as.sos</span>(<span class="dt">str1=</span>S1) %&gt;%
 <span class="st">  </span><span class="kw">mutate</span>(<span class="dt">str3=</span><span class="dv">2</span>*str1, <span class="dt">str4=</span><span class="kw">long</span>(str1)) %&gt;%<span class="st"> </span>
 <span class="st">  </span><span class="kw">mutate</span>(<span class="dt">str5=</span><span class="dv">3</span>*str3)</code></pre>
-<p>It is also possible to add a list of strategies to a sos object. A similar function (<code>add_strategy_all</code>) is added for use with dotted arguments, for consistency with dplyr:</p>
+<p>It is also possible to add a list of strategies to a <code>sos</code> object. A similar function (<code>add_strategy_all</code>) is added for use with dotted arguments, for consistency with dplyr:</p>
 <pre class="sourceCode r"><code class="sourceCode r">x4 &lt;-<span class="st"> </span><span class="kw">add_strategy_list</span>(x3, <span class="kw">list</span>(<span class="dt">str6=</span><span class="dv">2</span>*x3$str1, <span class="dt">str7=</span><span class="kw">dollar_neutral.strategy</span>(x3$str1, <span class="dt">bench_id=</span><span class="st">'spy'</span>)))</code></pre>
-<p>The following operations act of portfolios <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code> sum/subtract/multiply/divide two strategies holding- and date- wise or a strategy and a scalar. In addition, the following unary functions are available: <code>trunc(strategy)</code>, <code>ceiling(strategy)</code>, <code>round(strategy, digits)</code>, which extend the element-wise operations.</p>
-<p>A number of utility functions make manipulation easier: <code>long(strategy)</code> and <code>short(strategy)</code> take the long and short sides of the portfolio respectively; <code>dollarneutral(strategy, benchmark_id)</code> and <code>betaneutral(strategy, beta_matrix, benchmark_id)</code> perform dollar neutralization and beta neutralization of the portfolios in the strategy; this requires a loadings matrix and a corresponding asset id for which returns are available. Additional functions may be added in the future (e.g., to hedge a portfolio against all known factors).</p>
+<p>The following operations act on portfolios: <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code> i.e., sum/subtract/multiply/divide two strategies holding- and date- wise or a strategy and a scalar. In addition, the following unary functions are available: <code>trunc(strategy)</code>, <code>ceiling(strategy)</code>, <code>round(strategy, digits)</code>, which extend the element-wise operations.</p>
+<p>A number of utility functions make manipulation easier: <code>long(strategy)</code> and <code>short(strategy)</code> take the long and short sides of the portfolio respectively; <code>dollarneutral(strategy, benchmark_id)</code> and <code>betaneutral(strategy, beta_matrix, benchmark_id)</code> perform dollar neutralization and beta neutralization of the portfolios in the strategy, by adding to each portfolio a benchmark holding so that the resulting portfolio is either dollar-neutral or beta-neutral; this requires a loadings matrix and a corresponding asset id for which returns are available. Additional functions may be added in the future (e.g., to partially hedge a portfolio against a set of factors).</p>
 </div>
 <div id="filtering-and-selection" class="section level2">
 <h2>Filtering and Selection</h2>

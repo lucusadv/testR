@@ -10,7 +10,7 @@ add_strategy_list(data, X)
 \arguments{
 \item{data}{set of strategies (sos) object}
 
-\item{X,}{a list of objects taht can be converted into strategies}
+\item{X,}{a list of objects that can be converted into strategies}
 }
 \value{
 a sos object

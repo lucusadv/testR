@@ -7,7 +7,7 @@
 compute_alphabeta(rets, benchmark, country = "US")
 }
 \arguments{
-\item{rets}{numeric, returns}
+\item{rets}{numeric, vector of returns, element names are dates in format #'   YYYY-MM-DD}
 
 \item{benchmark}{numeric, time series of benchmarks}
 
