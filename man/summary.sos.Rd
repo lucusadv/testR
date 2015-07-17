@@ -4,14 +4,14 @@
 \alias{summary.sos}
 \title{Summarizes a set of strategies.}
 \usage{
-\method{summary}{sos}(X)
+\method{summary}{sos}(.data)
 
-\method{summary}{sos}(X)
+\method{summary}{sos}(.data)
 }
 \arguments{
-\item{sos}{object}
+\item{.data}{set of strategies}
 
-\item{S}{set of strategies}
+\item{sos}{object}
 }
 \value{
 a data frame with strategy name, first date, last date, n.dates, min no.assets, max no.assets, avg no.assets

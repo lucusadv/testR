@@ -4,7 +4,7 @@
 \alias{compute_returns_monthly}
 \title{Computes monthly returns of a strategy. Works only with daily backtests}
 \usage{
-compute_returns_monthly(rets, geometric = TRUE)
+compute_returns_monthly(rets, what = "product")
 }
 \arguments{
 \item{rets}{numeric, vector of returns, element names are dates in format

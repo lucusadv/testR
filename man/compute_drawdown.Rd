@@ -14,7 +14,7 @@ compute_drawdown(r, startDate = NULL, endDate = NULL)
 \item{endDate}{character, latest date, if specified}
 }
 \value{
-a data frame containing drawdown, its start
+a data frame containing drawdown (in percentage points), its start
 and end dates
 }
 \description{

@@ -7,7 +7,7 @@
 \method{mutate_}{sos}(.data, .dots)
 }
 \arguments{
-\item{data}{a set of strategies (sos) object}
+\item{.data}{a set of strategies (sos) object}
 
 \item{....}{expressions}
 }

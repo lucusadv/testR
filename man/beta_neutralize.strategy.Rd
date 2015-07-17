@@ -4,7 +4,8 @@
 \alias{beta_neutralize.strategy}
 \title{Beta-neutral version of a strategy.}
 \usage{
-\method{beta_neutralize}{strategy}(.data, BETA, bench_id)
+\method{beta_neutralize}{strategy}(.data, BETA, fraction = 1,
+  bench_id = "78462F103")
 }
 \arguments{
 \item{BETA}{matrix of the betas of the assets (dates/assets)}

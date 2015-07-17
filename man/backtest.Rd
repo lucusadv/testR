@@ -7,9 +7,13 @@
 backtest(X, RETS, shortfall = 0, borrow = 0)
 }
 \arguments{
-\item{X}{set of strategies}
+\item{X}{set of strategies object}
 
 \item{RETS}{matrix of returns}
+
+\item{shortfall}{numeric expected shortfall (e.g. 0.20 = 20 bps)}
+
+\item{borrow}{numeric borrow costs (e.g. 0.5 = 0.5%/yrs)}
 }
 \value{
 list of performance objects

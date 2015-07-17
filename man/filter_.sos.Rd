@@ -7,9 +7,9 @@
 \method{filter_}{sos}(.data, .dots)
 }
 \arguments{
-\item{data}{a set of strategies (sos) object}
+\item{.dots}{expressions using the variable date, returning a boolean}
 
-\item{...}{expressions using the variable date, returning a boolean}
+\item{data}{a set of strategies (sos) object}
 }
 \description{
 Filter portfolios in a sos object by date (safe hatch).

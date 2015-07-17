@@ -5,7 +5,7 @@
 \title{Computes annual returns of a strategy. It is stronly recommended that this be
 run on daily backtests, although the function will run on monthly backtests.}
 \usage{
-compute_returns_yearly(rets, geometric = TRUE)
+compute_returns_yearly(rets, what = "product")
 }
 \arguments{
 \item{rets}{numeric, vector of returns, element names are dates in format

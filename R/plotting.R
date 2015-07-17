@@ -56,8 +56,9 @@ plotts <- function(x, main='asset', ylim = NULL,
     geom_line() + 
     ggtitle(main) + 
     scale_y_continuous(limits = ylim) +
-    ylab(ylabel) +
-    scale_x_date(labels = date_format("%m-%Y"), minor_breaks='1 year')  
+    ylab(ylabel) 
+  if (length(unique(DS$Date)) > 500)
+    p <- p + scale_x_date(labels = date_format("%m-%Y"), minor_breaks='1 year')  
   print(p)  
 }
 

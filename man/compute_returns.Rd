@@ -11,7 +11,8 @@ compute_returns(r, startDate = NULL, endDate = NULL, country = "US")
 
 \item{endDate}{character, latest date, if specified}
 
-\item{rets}{numeric, vector of returns, element names are dates in format #'   YYYY-MM-DD}
+\item{rets}{numeric, vector of returns, element names are dates in format
+YYYY-MM-DD}
 }
 \value{
 data frame, annual returns

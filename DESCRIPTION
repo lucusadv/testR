@@ -1,7 +1,7 @@
 Package: testR
 Type: Package
 Title: Asset backtest framework.
-Version: 0.2
+Version: 0.3
 Date: 2015-02-27
 Author: Giuseppe A. Paleologo
 Maintainer: Giuseppe A. Paleologo <paleologo@gmail.com>
@@ -11,6 +11,7 @@ Description: The package provides functions for easier manipulation of
     data and graphics.
 Depends: 
     gridExtra,
+    corrplot,
     ggplot2,
     plyr,
     dplyr,

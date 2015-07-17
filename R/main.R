@@ -11,7 +11,10 @@ long <- function(x) UseMethod("long")
 short <- function(x) UseMethod("short")
 
 #' @export
-beta_neutralize <- function(x, BETA, bench_id) UseMethod("beta_neutralize")
+dollar_neutralize <- function(x) UseMethod("dollar_neutralize")
+
+#' @export
+beta_neutralize <- function(x, BETA, fraction, bench_id) UseMethod("beta_neutralize")
 
 #' @export
 get_betas <- function(x, y) UseMethod("get_betas")
@@ -29,7 +32,8 @@ get_betas <- function(x, y) UseMethod("get_betas")
 #' @return vector of pnl
 #'
 #' @export
-.compute_performance <- function(PORT, RETS, shortfall=0, borrow=0, keep_strategy=FALSE){
+.compute_performance <- function(PORT, RETS, shortfall=0, borrow=0, 
+                                 keep_strategy=FALSE){
   stopifnot(all(names(PORT) %in% row.names(RETS)))
   dtes_start <- min(names(PORT))
   dtes_end   <- max(row.names(RETS))
@@ -42,6 +46,7 @@ get_betas <- function(x, y) UseMethod("get_betas")
 
   turnover <- structure(rep(0, nrow(R)), names=dtes)
   for (d in dtes){
+    # message(Sys.time(), ': backtest for date ', d)
     if (d %in% names(PORT)) {
       tmp_portfolio <- work_portfolio[[d]]
       scaling_factor <- ifelse(d > dtes_start, sum(abs(tmp_portfolio))/sum(abs(PORT[[d]])), 1)
@@ -62,7 +67,7 @@ get_betas <- function(x, y) UseMethod("get_betas")
   days_trading <- 252/365*as.numeric(as.Date(first(dtes))-as.Date(last(dtes)))
   portfolio_gmv <- sapply(work_portfolio, function(x) sum(abs(x)))
   portfolio_shortnmv <- sapply(work_portfolio, function(x) -sum(pmin(x,0)))
-  turnover_costs <- shortfall*sum(turnover)*portfolio_gmv/days_trading
+  turnover_costs <- shortfall*turnover*portfolio_gmv / 100
   borrow_costs <- portfolio_shortnmv*borrow
   pnl_adj <- pnl - borrow_costs - turnover_costs
   class(work_portfolio) <- c('strategy', 'list')
@@ -73,6 +78,11 @@ get_betas <- function(x, y) UseMethod("get_betas")
        strategy = work_portfolio)
 }
 
+#' Computes L1 norm. Internal use only
+#' 
+#' @param x numeric vector
+#' @return numeric
+L1 <- function(x) sum(abs(x), na.rm = TRUE)
 
 #' Converts a list of vectors, a data frame or a matrix into a strategy
 #' object.
@@ -194,13 +204,13 @@ add_strategy_list <- function(data, X){
   strategies_names <- names(X)
   ctr <- 1
   if (is.null(strategies_names)) strategies_names <- rep('', length(data))
-  ind <- names(data) %>% str_match('S([0-9]*)$') %>% na.omit
+  ind <- names(data) %>% str_match('^S([0-9]*)$') %>% na.omit
   if (length(ind)){
     offset_ind  <- ind[,2] %>% as.numeric %>% max
     ctr <- ctr + offset_ind
   }
   for (i in seq(X)){
-    if (grepl('S([0-9]*)$', names(X)[i])) {
+    if (grepl('^S([0-9]*)$', names(X)[i])) {
       names(X)[i] <- paste0('S', ctr)
       ctr <- ctr + 1
     }
@@ -239,19 +249,69 @@ summary.strategy <- function(data){
   )
 }
 
+#' extracts a strategy from a set-of-strategies
+#'
+#' @param .data sos object
+#' @param x string, strategy name
+#' @return strategy
+#'
+#' @export
+#'
+`$.sos` <- function(.data, x){
+  class(.data) <- 'list'
+  y <- .data[[x]]
+  class(y) <- c('strategy', 'list')
+  y
+}
 
+#' extracts a strategy from a set-of-strategies
+#'
+#' @param .data sos object
+#' @param x string, strategy name
+#' @return strategy
+#'
+#' @export
+#'
+`[[.sos` <- function(.data, x){
+  class(.data) <- 'list'
+  y <- .data[[x]]
+  class(y) <- c('strategy', 'list')
+  y
+}
+
+#' extracts a strategy from a set-of-strategies
+#'
+#' @param .data sos object
+#' @param x vector of strategies, strategy names
+#' @return sos object
+#'
+#' @export
+#'
+`[.sos` <- function(.data, x){
+  y <- list()
+  class(y) <- c('sos', 'list')
+  for (v in x)
+    y[[v]] <- .data[[v]]
+  y
+}
 
 
 #' Computes returns for a set of strategies and turnover.
 #'
-#' @param X set of strategies
+#' @param X set of strategies object
 #' @param RETS matrix of returns
+#' @param shortfall numeric expected shortfall (e.g. 0.20 = 20 bps)
+#' @param borrow numeric borrow costs (e.g. 0.5 = 0.5%/yrs)
 #' @return list of performance objects
 #'
 #' @export
 #'
 backtest <- function(X, RETS, shortfall=0, borrow=0){
-  X <- lapply(X, .compute_performance, RETS=RETS, shortfall=shortfall, borrow=borrow)
+  X <- lapply(X, 
+                .compute_performance, 
+                RETS = RETS, 
+                shortfall = shortfall, 
+                borrow = borrow)
   ret      <- lapply(X, '[[', 'ret')      %>% do.call(cbind, .)
   ret_adj  <- lapply(X, '[[', 'ret_adj')  %>% do.call(cbind, .)
   turnover <- lapply(X, '[[', 'turnover') %>% do.call(cbind, .)
@@ -310,8 +370,8 @@ compute_turnover.strategy <- function(X){
 binary_op_strategy <- function(x, y, op){
   #   browser()
   if ('strategy' %in% class(x) & 'strategy' %in% class(y)){
-    common_names <- intersect(names(x), names(y))
-    out <- .lapply(common_names, function(n) opVectors(x[[n]], y[[n]], FUN=op, all=TRUE))
+    common_names <- intersect(names(x), names(y)) %>% withNames
+    out <- lapply(common_names, function(n) opVectors(x[[n]], y[[n]], FUN=op, all=TRUE))
   } else if ('strategy' %in% class(x) & 'numeric' %in% class(y) & length(y)==1){
     out <- lapply(x, function(v) op(v, y))
   } else if ('strategy' %in% class(y) & 'numeric' %in% class(x) & length(x)==1){
@@ -444,7 +504,7 @@ short.strategy <- function(.data){
 #'
 #' @export
 #'
-dollar_neutral.strategy <- function(.data, bench_id){
+dollar_neutralize.strategy <- function(.data, bench_id = "78462F103"){
   y <- lapply(.data, function(x) {
     x <- c(x, -sum(x))
     names(x)[length(x)] <- bench_id
@@ -499,14 +559,18 @@ get_betas.sos <- function(.data, BETA){
 #'
 #' @export
 #'
-beta_neutralize.strategy <- function(.data, BETA, bench_id){
-  betas <- get_betas(.data, BETA)
+beta_neutralize.strategy <- function(.data, BETA, fraction = 1, 
+                                     bench_id = "78462F103"){
+  beta_hedges <- get_betas(.data, BETA) * fraction
   dtes <- names(.data)
   strat_neutral <- lapply(dtes, function(d) {
-    y <- c(.data[[d]], -betas[d])
-    names(y)[length(y)] <- bench_id
+    y <- .data[[d]] 
+    y[bench_id] <- ifelse(is.na(y[bench_id]), 
+      -beta_hedges[d], 
+      y[bench_id] - beta_hedges[d]
+    )
     y
-    })
+  })
   names(strat_neutral) <- dtes
   class(strat_neutral) <- c('strategy', 'list')
   strat_neutral
@@ -522,15 +586,16 @@ beta_neutralize.strategy <- function(.data, BETA, bench_id){
 #'
 #' @export
 #'
-beta_neutralize.sos <- function(.data, BETA, bench_id){
-  sos_neutral <- lapply(.data, function(x) beta_neutralize(x, BETA, bench_id))
+beta_neutralize.sos <- function(.data, BETA, fraction = 1, 
+                                bench_id = "78462F103"){
+  sos_neutral <- lapply(.data, function(x) beta_neutralize(x, BETA, fraction, bench_id))
   class(sos_neutral) <- c('sos', 'list')
   sos_neutral
 }
 
 #' Adds portfolios to a sos objects (safe hatch).
 #'
-#' @param data a set of strategies (sos) object
+#' @param .data a set of strategies (sos) object
 #' @param .... expressions
 #' @return a sos object
 #' @export
@@ -544,7 +609,7 @@ mutate_.sos <- function(.data, .dots){
 #' Filter portfolios in a sos object by date (safe hatch).
 #'
 #' @param data a set of strategies (sos) object
-#' @param ... expressions using the variable date, returning a boolean
+#' @param .dots expressions using the variable date, returning a boolean
 #'
 #' @export
 #'
@@ -556,6 +621,21 @@ filter_.sos <- function(.data, .dots){
   })
   class(X) <- c('sos','list')
   X
+}
+
+#' Filter portfolios in a strategy object by date (safe hatch).
+#'
+#' @param .data strategy object 
+#' @param ... expressions using the variable date, returning a boolean
+#'
+#' @export
+#'
+filter_.strategy <- function(.data, .dots){
+  tmp <- data.frame(date=names(.data), stringsAsFactors=FALSE)
+  ind <- lazy_eval(.dots, tmp)[[1]]
+  x <- .data[ind]
+  class(x) <- c('strategy','list')
+  x
 }
 
 #' selects portfolios in a sos object by date (safe hatch).
@@ -587,21 +667,21 @@ get_strat <- function(.data, ...){
 
 #' Summarizes a set-of-strategies object.
 #'
-#' @param S set of strategies
+#' @param .data set of strategies
 #' @return a data frame with summary satistics
 #' @export
 #'
-summary.sos <- function(X){
-  lapply(X, function(x){
+summary.sos <- function(.data){
+  .data %>% lapply(function(x){
     elem <- sapply(x, length)
-    data.frame(first_date = min(names(x)),
-               last_date=max(names(x)),
-               mean_nassets= mean(elem),
-               min_nassets= min(elem),
-               max_nassets= max(elem))
+    data.frame(first_date   = min(names(x)),
+               last_date    = max(names(x)),
+               mean_nassets = mean(elem),
+               min_nassets  = min(elem),
+               max_nassets  = max(elem))
   }) %>%
     bind_rows %>%
-    {data.frame(strategy =names(X),.)}
+    {data.frame(strategy = names(.data),.)}
 }
 
 
@@ -626,10 +706,25 @@ make_report_list <- function(data, ...){
 #'
 make_report_all <- function(data, fn_list){
   S <- data.frame(strategy=colnames(data))
-  lapply(fn_list, function(fn) adply(data, 2, fn) %>% select(-X1))  %>%
+  axes(data) <- c('date', 'strategy')
+  lapply(fn_list, function(fn) adply(data, 2, fn) %>% select(-strategy))  %>%
     bind_cols %>%
     {cbind(S,.)}
 }
+
+
+
+#' Computes date range
+#'
+#' @param r numeric vector, returns
+#' @return a data frame containing start date and end date of the return data
+#' @export
+compute_daterange <- function(r){
+  data.frame(start.date = min(names(r)),
+             end.date = max(names(r)))
+}
+
+
 
 
 #' Computes maximum drawdown.
@@ -637,7 +732,7 @@ make_report_all <- function(data, fn_list){
 #' @param r numeric vector, returns
 #' @param startDate character, earliest date, if specified
 #' @param endDate character, latest date, if specified
-#' @return a data frame containing drawdown, its start
+#' @return a data frame containing drawdown (in percentage points), its start
 #' and end dates
 #' @export
 compute_drawdown <- function(r, startDate=NULL, endDate=NULL){
@@ -663,9 +758,9 @@ compute_drawdown <- function(r, startDate=NULL, endDate=NULL){
     drawdown_startdate <- NA_character_
     drawdown_enddate <- NA_character_
   }
-  out <- data.frame(maxdrawdown=max_drawdown,
-             start.date=drawdown_startdate,
-             end.date=drawdown_enddate,
+  out <- data.frame(maxdrawdown = round(100 * max_drawdown,2),
+             start.date = drawdown_startdate,
+             end.date = drawdown_enddate,
              stringsAsFactors = FALSE)
   row.names(out) <- NULL
   out
@@ -708,7 +803,7 @@ compute_sharpe <- function(rets, period=1, volAdjPeriod=NULL,
 #' @return data frame, hit rate of the strategy by year-month
 #' @export
 compute_hitrate_monthly <- function(rets){
-  rets %>% sign %>% compute_returns_monthly(geometric=FALSE) %>% {(. + 1)/2}
+  rets %>% sign %>% compute_returns_monthly(what = 'mean') %>% {(. + 1)/2}
 }
 
 #' Computes monthly hit rate of a strategy. Works only with daily backtests
@@ -718,7 +813,7 @@ compute_hitrate_monthly <- function(rets){
 #' @return data frame, return of the strategy by year-month
 #' @export
 compute_hitrate_yearly <- function(rets){
-  rets %>% sign %>% compute_returns_yearly(geometric=FALSE) %>% {(. + 1)/2}
+  rets %>% sign %>% compute_returns_yearly(what = 'mean') %>% {(. + 1)/2}
 }
 
 #' Computes monthly returns of a strategy. Works only with daily backtests
@@ -727,21 +822,25 @@ compute_hitrate_yearly <- function(rets){
 #'   YYYY-MM-DD
 #' @return data frame, return of the strategy by year-month
 #' @export
-compute_returns_monthly <- function(rets, geometric = TRUE){
-  if (geometric) {
+compute_returns_monthly <- function(rets, what = 'product'){
+  if (what =='product') {
     compounder <- function(x) prod(x + 1) - 1
-  } else {
+  } else if (what == 'sum'){
     compounder <- sum
+  } else if (what == 'mean'){
+    compounder <- mean
+  } else {
+    stop('what argument must be product, sum, or mean.')
   }
   dtes_returns <- names(rets) %>%
-    ensure_that(!any(duplicated(.), err_desc = 'duplicated dates')) %>%
-    as.Date %>% diff %>% as.numeric %>%
-    ensure_that(max(.) <= 4, err_desc = 'returns do not appear to be daily')
+    ensure_that(!any(duplicated(.)), err_desc = 'duplicated dates')
+  dtes_returns %>% as.Date %>% diff %>% as.numeric %>%
+    ensure_that(mean(.) <= 2, err_desc = 'returns do not appear to be daily')
   rets %>% v2df(c('date','ret')) %>%
     mutate(date=substr(date,1 , 7)) %>%
     dplyr::group_by(date) %>%
     dplyr::summarize(nobs = length(ret), ret=compounder(ret)) %>%
-    ensure_that(mean(nobs) >= 4, err_desc = 'fewer than 4 returns per month') %>%
+    # ensure_that(mean(nobs) >= 4, err_desc = 'fewer than 4 returns per month') %>%
     {x <- data.frame(matrix(.$ret, nrow=1)); names(x) <- .$date;x}
 }
 
@@ -752,20 +851,25 @@ compute_returns_monthly <- function(rets, geometric = TRUE){
 #'   YYYY-MM-DD
 #' @return data frame, return of the strategy by year
 #' @export
-compute_returns_yearly <- function(rets, geometric = TRUE){
-  if (geometric) {
+compute_returns_yearly <- function(rets, what = 'product'){
+  if (what =='product') {
     compounder <- function(x) prod(x + 1) - 1
-  } else {
+  } else if (what == 'sum'){
     compounder <- sum
+  } else if (what == 'mean'){
+    compounder <- mean
+  } else {
+    stop('what argument must be product, sum, or mean.')
   }
   dtes_returns <- names(rets) %>%
-    ensure_that(!any(duplicated(.), err_desc = 'duplicated dates')) %>%
+    ensure_that(!any(duplicated(.)), err_desc = 'duplicated dates') 
+  dtes_returns %>%
     as.Date %>% diff %>% as.numeric %>%
-    ensure_that(max(.) <= 22, err_desc = 'returns do not appear to be monthly')
+    ensure_that(mean(.) <= 22, err_desc = 'returns do not appear to be monthly')
   rets %>% v2df(c('date','ret')) %>%
     mutate(date=substr(date, 1, 4)) %>%
     dplyr::group_by(date) %>%
-    dplyr::summarize(nobs = length(ret), ret=compounder) %>%
+    dplyr::summarize(nobs = length(ret), ret=compounder(ret)) %>%
     {x <- data.frame(matrix(.$ret, nrow=1)); names(x) <- .$date; x}
 }
 
@@ -778,15 +882,15 @@ compute_returns_yearly <- function(rets, geometric = TRUE){
 #' @return data frame, alpha and beta of the strategy
 #' @export
 compute_alphabeta <- function(rets, benchmark, country='US'){
-  dtes_returns <- names(rets) %>%
-    ensure_that(!any(duplicated(.), err_desc = 'duplicated dates')) %>%
+  dtes_returns <- names(rets) %>% 
+    ensure_that(!any(duplicated(.)), err_desc = 'duplicated dates') %>%
     as.Date %>% diff %>% as.numeric %>%
-    ensure_that(max(.) <= 4, err_desc = 'returns do not appear to be daily')
+    ensure_that(mean(.) <= 2, err_desc = 'returns do not appear to be daily')
   benchmark %<>% v2df(c('date', 'benchmark'))
   rets %<>% v2df(c('date','ret'))
   A <- left_join(rets, benchmark, by='date') %>%
-    dplyr::arrange(desc(date))
-  stopifnot(all(!is.na(A)))
+    na.omit %>%
+    dplyr::arrange(desc(date)) 
   numdays <- numTD(min(A$date), max(A$date), country=country)
   period <- numdays / nrow(rets)
   tmp <- lm(ret ~ benchmark, data=A)$coefficients
@@ -795,7 +899,8 @@ compute_alphabeta <- function(rets, benchmark, country='US'){
 
 #' Computes average annualized returns for a time series of returns.
 #'
-#' @param rets numeric, vector of returns, element names are dates in format #'   YYYY-MM-DD
+#' @param rets numeric, vector of returns, element names are dates in format 
+#'   YYYY-MM-DD
 #' @param startDate character, earliest date, if specified
 #' @param endDate character, latest date, if specified
 #' @return data frame, annual returns
@@ -806,7 +911,7 @@ compute_returns <- function(r, startDate=NULL, endDate=NULL, country='US'){
   dte_start <- min(names(r))
   dte_end   <- max(names(r))
   n <- 252/length(getTD(dte_start, dte_end, country=country))
-  data.frame(return=(prod(r + 1))^n - 1)
+  data.frame(return=round(100*(prod(r + 1)^n - 1), 2))
 }
 
 #' Rademacher complexity.
@@ -930,7 +1035,7 @@ estimate_volatility <- function(R, VOLT=NULL, halflife=126, country='US'){
                    tail(head(ESTIMATE, -2), -3) + 
                    tail(head(ESTIMATE, -3), -2) +
                    tail(head(ESTIMATE, -4), -1) +
-                   head(ESTIMATE, -5)    ) / 5
+                   head(ESTIMATE, -5)    ) / 6
   ESTIMATE
 }
 
@@ -967,123 +1072,58 @@ estimate_mean <- function(R, MEAN=NULL, halflife=126, country='US'){
   ESTIMATE
 }
 
-#' Estimates the trailing beta of a return matrix  
-#' 
-#' 
-#' @param R matrix, asset returns
-#' @param BETA matrix, existing beta matrix. If NULL, the matrix is estimated
-#'   from scratch; otherwise only dates following the latest date in BETA are
-#'   estimated.
-#' @param halflife numeric, half-life in weighting returns
-#' @param width numeric, window width used for estimation
-#' @param bench_id character, id of the benchmark
-#' @return a matrix
-#'   
-#' @author G.A.Paleologo
-#' @export
-estimate_beta <- function(R, BETA=NULL, halflife=126, width=253, bench_id="78462F103"){
-  w <- exp(-(width:1)/halflife)
-  R_dates <- getDates(R)
-  if (!is.null(BETA)){ 
-    beta_dates <- R_dates[R_dates > max(getDates(BETA))]
-  } else {
-    beta_dates <- tail(R_dates, -63) # at least three months of data
-  }
-  # this has nrows = ( n_dates - halflife) 
-  BETA_est <- array(NA_real_, 
-                    dim=c(length(beta_dates), ncol(R)), 
-                    dimnames= list(date = beta_dates, id=colnames(R))) 
-  bench_R <- R[, bench_id] 
-  # this function returns the index range prior to date d
-  validInterval <- function(d){
-    i <- which(R_dates == d) - 1
-    j <- max(i-width + 1, 1)
-    i:j
-  }
-  for (d in beta_dates){ 
-    message(Sys.time(), ': estimating beta for date ', d)
-    ind <- validInterval(d)
-    width_effective <- length(ind)
-    w_temp <- w[( width - width_effective + 1 ):width]
-    R_temp <- R[ind,]
-    bench_R_temp <- bench_R[ind]
-    var_bench_temp <- sum(w_temp * bench_R_temp^2, na.rm=TRUE) / sum(w_temp*!is.na(bench_R_temp))
-    BETA_est[d, ] <- apply(R_temp, 2, function(x) {
-      tmp <- w_temp * x * bench_R_temp
-      sum(tmp, na.rm = T) / sum( w_temp * !is.na(tmp))
-      }) / var_bench_temp
-  }
-  # smooths BETA over 5 days to reduce impact of new observations
-  BETA_est <-  ( tail(BETA_est, -5) + 
-    tail(head(BETA_est, -1), -4) + 
-    tail(head(BETA_est, -2), -3) + 
-    tail(head(BETA_est, -3), -2) +
-    tail(head(BETA_est, -4), -1) +
-         head(BETA_est, -5)    ) / 5
-  if (!is.null(BETA)){
-    BETA_est <- overlay(BETA, BETA_est)
-  }
-  BETA_est
-}
-
-#' Estimates the trailing beta of a return matrix with a parallel calculation.
-#' Still experimental and subject to change.
-#' 
-#' 
-#' @param R matrix, asset returns
-#' @param BETA matrix, existing beta matrix. If NULL, the matrix is estimated 
-#'   from scratch; otherwise only dates following the latest date in BETA are 
-#'   estimated.
-#' @param halflife numeric, half-life in weighting returns
-#' @param bench_id character, id of the benchmark
-#' @return a matrix
-#'   
-#' @author G.A.Paleologo
-#' @export
-estimate_beta_par <- function(R, BETA=NULL, halflife=126, width=253, bench_id="78462F103"){
-  f <- require(parallel)
-  if (!f) stop('parallel is not enabled or installed on this system')
-  A <- list()
-  n_steps <- floor(nrow(R)/10)
-  for (i in 1:20){
-    ind <- max(1, (i-1)*n_steps - 80):min(1 + i*n_steps, nrow(R))
-    if ( (i-1)*n_steps - 80 > nrow(R)) break
-    A[[i]] <- R[ind,]
-  }
-  beta_partial <- mclapply(A, 
-                           estimate_beta, 
-                           halflife = halflife, 
-                           width = width, 
-                           bench_id = bench_id, 
-                           mc.preschedule = FALSE)
-  BETA <- accumulate(beta_partial, all.dim=c(TRUE, TRUE))
-  BETA  
-}
-
-# unused function in the absence of a risk model
-riskDecomp <- function(dte, 
-                       portfolio,
-                       model = 'AXUS3',
-                       type = c('MH', 'MH-S', 'MH-M'),
-                       workDir = file.path(getOption('axiomaus'),'AxiomaRiskModels-FlatFiles'),
-                       cacheDir = file.path(getOption('axiomaus'),'AxiomaRiskModels-Rdata'),
-                       idtable = file.path(getOption('stockdir'), 'cusip.ticker.Rdata')){
-  B <- getAxioma(dte, model = model, type = type, workDir = workDir, cacheDir = cacheDir, idtable = idtable)
-  Omega <- getAxiomaCov(dte, model = model, type = type, workDir = workDir, cacheDir = cacheDir)
-  D <- getAxiomaFld(dte, model = model, type = type, field = "SpecificRisk", workDir = workDir, cacheDir = cacheDir, idtable = idtable)
-  cusips <- names(portfolio)
-  EXP <- portfolio %*% B[cusips, ]
-  D <- D[cusips]
-  IDIOVAR <- sum((portfolio*D)^2)
-  FACTVAR <- (matrix(EXP, nrow=1) %*% Omega %*% matrix(EXP, ncol=1))[,] 
-  TOTVAR <- FACTVAR + IDIOVAR
-  PERCIDIO <- IDIOVAR/TOTVAR
-  STYLEVAR <- (matrix(EXP[, 1:11], nrow=1) %*% Omega[1:11,1:11] %*% matrix(EXP[,1:11], ncol=1))[,] 
-  INDUSTRYVAR <- (matrix(EXP[, -(1:11)], nrow=1) %*% Omega[-(1:11), -(1:11)] %*% matrix(EXP[, -(1:11)], ncol=1))[,] 
-  SINGLEFACVAR <- (EXP[]^2 *diag(Omega))[,] 
-  list(PERCIDIO = PERCIDIO, TOTVAR = TOTVAR, IDIOVAR = IDIOVAR, 
-       FACTVAR = FACTVAR, STYLEVAR = STYLEVAR, INDUSTRYVAR = INDUSTRYVAR, 
-       SINGLEFACVAR = SINGLEFACVAR)
-}
 
 
+
+# 
+# 
+# .compute_performance_fast <- function(STRAT, CUMRETS, shortfall=0, borrow=0){
+#   stopifnot(all(names(STRAT) %in% row.names(RETS)))
+#   rebal_dates <- names(STRAT)
+#   start_date <- rebal_dates[1]
+#   # R <- filter(CUMRETS, date >= start_date)
+#   
+#   bind[R, STRAT] <-
+#     backtest_dates <- row.names(R)
+#   num_dates <- length(backtest_dates)
+#   backtest_ids <- intersect(colnames(R), Reduce(union, lapply(STRAT, names)))
+#   num_id <- length(backtest_ids)
+#   R <- R[, backtest_ids]
+#   STRAT2 <- array(0, dim = c(num_dates, length(backtest_ids)), 
+#                   dimnames = list(date = backtest_dates, id = backtest_ids))
+#   pnl <- structure(rep(NA, num_dates), names=backtest_dates)
+#   turnover <- structure(rep(0, length(rebal_dates) -1), names=rebal_dates[-1])
+#   scaling_factor <- 1
+#   for (i in seq(rebal_dates)){
+#     d <- rebal_dates[i]
+#     d_next <- rebal_dates[i+1]
+#     if (is.na(d_next)) d_next <- tail(backtest_dates, 1)
+#     ind <- which(backtest_dates == d):(which(backtest_dates == d_next) - 1)
+#     work_portfolio <- structure(rep(0, num_id), names = backtest_ids)
+#     work_portfolio[names(STRAT[[d]])] <- STRAT[[d]]
+#     if (i > 1) {
+#       j <- ind[1] - 1
+#       project_portfolio <- STRAT2[j,] * R[j+1,]/R[j, ]
+#       scaling_factor <- L1(project_portfolio)/L1(work_portfolio) 
+#       work_portfolio <- scaling_factor * work_portfolio
+#       turnover[d] <- L1(project_portfolio - work_portfolio) / 
+#         L1(work_portfolio)
+#       e <- matrix(rep(1, length(ind)), ncol = 1)
+#       STRAT2[ind,] <- R[ind, ] * (e %*% (work_portfolio/R[j,]))
+#     } else {
+#       e <- matrix(rep(1, length(ind)), ncol = 1)
+#       STRAT2[ind,] <- R[ind, ] * (e %*% work_portfolio)
+#     }
+#   } 
+#   portfolio_gmv <- STRAT2 %>% abs %>% apply(1, sum)
+#   pnl <- STRAT2 %>% apply(1, sum) %>% diff %>% set_names(head(backtest_dates,-1))
+#   portfolio_shortnmv <- apply(pmax(-STRAT2, 0), 1, sum)
+#   turnover_costs <- 1e-2*shortfall*opVectors(turnover,portfolio_gmv, all = FALSE, FUN = `*`)
+#   borrow_costs <- portfolio_shortnmv*borrow
+#   pnl_adj <- pnl - tail(borrow_costs,-1) - sum(turnover_costs)/length(pnl)
+#   class(work_portfolio) <- c('strategy', 'list')
+#   list(ret = pnl/head(portfolio_gmv, -1),
+#        ret_adj = pnl_adj/head(portfolio_gmv, -1),
+#        turnover = turnover
+#   )
+# }
