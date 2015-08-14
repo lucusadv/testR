@@ -49,11 +49,21 @@ get_betas <- function(x, y) UseMethod("get_betas")
     # message(Sys.time(), ': backtest for date ', d)
     if (d %in% names(PORT)) {
       tmp_portfolio <- work_portfolio[[d]]
-      scaling_factor <- ifelse(d > dtes_start, sum(abs(tmp_portfolio))/sum(abs(PORT[[d]])), 1)
-      work_portfolio[[d]] <- scaling_factor * PORT[[d]]
+      scaling_factor <- ifelse(d > dtes_start, 
+                               sum(abs(tmp_portfolio))/sum(abs(PORT[[d]])), 1) #??! When is this ever not 1?
+      work_portfolio[[d]] <- scaling_factor * PORT[[d]] #??! This is the assumed 
+      #??! weighting of the portfolio at the **end-of-day**, correct? In essence,
+      #??! we are assuming that we execute *all* of trades at the very end of the 
+      #??! trading day at that day d's closing price, correct?
       turnover[d] <- sum(abs(opVectors(work_portfolio[[d]], tmp_portfolio, FUN=`-`))) / sum(abs(tmp_portfolio))
     }
-    pnl[d] <- opVectors(work_portfolio[[d]], R[d, ], FUN = `*`) %>% sum(na.rm=TRUE)
+    pnl[d] <- opVectors(work_portfolio[[d]], R[d, ], FUN = `*`) %>% sum(na.rm=TRUE) #??! The R[d] are the
+    #??! returns of stocks calculated as the change in closing price on d-1 relative to the closing price
+    #??! on day d, correct? If this is the case and the answer to my question regarding line 54 is "yes",
+    #??! then I think this is the wrong calculation. It would have to be offset somehow, say 
+    #??! pnl[d] <- work_portfolio[[d-1]], R[d, ]. This, of course, ignores any "trading PnL" from 
+    #??! intraday trading. Using VWAP instead of closing prices would help alleviate this probably 
+    #??! but it's less reliable than closing prices and probably doesn't matter that much.
     if (is.na(pnl[d])) stop('missing dates')
     if (d < dtes_end){
       d_next <- succ(d, dtes)
