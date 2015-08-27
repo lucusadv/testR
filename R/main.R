@@ -366,6 +366,7 @@ compute_turnover.sos <- function(X){
 #'
 #' @param X strategy object
 #' @return matrix with turnover per period
+#' @note #REV!1 JWP 2015-08-20
 #' @export
 #'
 compute_turnover.strategy <- function(X){
