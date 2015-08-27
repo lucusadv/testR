@@ -730,6 +730,7 @@ make_report_all <- function(data, fn_list){
 #'
 #' @param r numeric vector, returns
 #' @return a data frame containing start date and end date of the return data
+#' @note #REV!3 JWP 2015-08-27
 #' @export
 compute_daterange <- function(r){
   data.frame(start.date = min(names(r)),
