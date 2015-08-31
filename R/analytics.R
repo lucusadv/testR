@@ -9,6 +9,7 @@
 #' @param width numeric, window width used for estimation
 #' @param bench_id character, id of the benchmark
 #' @return a matrix
+#' @note #REV!1 JWP 2015-08-10 | #REV!2 JWP 2015-08-10
 #'   
 #' @author G.A.Paleologo
 #' @export
@@ -38,10 +39,10 @@ estimate_beta <- function(R, BETA=NULL, halflife=126, width=253, bench_id="78462
     w_temp <- w[( width - width_effective + 1 ):width]
     R_temp <- R[ind,, drop = FALSE]
     bench_R_temp <- bench_R[ind]
-    var_bench_temp <- sum(w_temp * bench_R_temp^2, na.rm=TRUE) / sum(w_temp*!is.na(bench_R_temp))
+    var_bench_temp <- sum(w_temp * bench_R_temp^2, na.rm=TRUE) / sum(w_temp*!is.na(bench_R_temp)) #??! This assumes that the E[bench_R] = 0, correct?
     BETA_est[d, ] <- apply(R_temp, 2, function(x) {
       tmp <- w_temp * x * bench_R_temp
-      sum(tmp, na.rm = T) / sum( w_temp * !is.na(tmp))
+      sum(tmp, na.rm = T) / sum( w_temp * !is.na(tmp)) #??! This assumes that the E[x] = 0, correct?
       }) / var_bench_temp
   }
   # smooths BETA over 5 days to reduce impact of new observations
@@ -61,15 +62,12 @@ estimate_beta <- function(R, BETA=NULL, halflife=126, width=253, bench_id="78462
 #' 
 #' 
 #' @param R matrix, asset returns
-#' @param BETA matrix, existing beta matrix. If NULL, the matrix is estimated 
-#'   from scratch; otherwise only dates following the latest date in BETA are 
-#'   estimated
 #' @param width numeric, window width used for estimation
 #' @param bench_id character, id of the benchmark. If id is NULL, then returns 
 #'   are used
 #' @return a data frame with fields date (format YYYY-MM-DD), id, and raw
 #'   loadings
-#'   
+#' @note #REV!2 JWP 2015-08-11   
 #' @author G.A.Paleologo
 #' @export
 estimate_momentum <- function(R, width = 253, bench_id = "78462F103"){
@@ -84,7 +82,7 @@ estimate_momentum <- function(R, width = 253, bench_id = "78462F103"){
   R_dates <- getDates(R)
   ndates <- nrow(R)
   MOME_est <- R[-1:-width, ] / R[1:(ndates - width)]
-  # smooths BETA over 5 days to reduce impact of new observations
+  # smooths momentum est over 5 days to reduce impact of new observations
   MOME_est <-  ( tail(MOME_est, -5) + 
                    tail(head(MOME_est, -1), -4) + 
                    tail(head(MOME_est, -2), -3) + 

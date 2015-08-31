@@ -193,12 +193,13 @@ add_strategy_all <- function(data, ...){
   add_strategy_list(data, x)
 }
 
-#' Add one or more portfolios, wrapped into a list, to a set-of-portfolios (sos)
-#' object.
+#' Add one or more portfolios, wrapped into a list, to a set-of-portfolios / 
+#' set-of-strategies (sos) object.
 #'
 #' @param data set of strategies (sos) object
 #' @param X, a list of objects that can be converted into strategies
 #' @return a sos object
+#' @note #REV!2 JWP 2015-08-11
 #' @export
 #'
 add_strategy_list <- function(data, X){
@@ -489,7 +490,7 @@ long.strategy <- function(.data){
   y
 }
 
-#' Longs of a strategy's holdings.
+#' Shorts of a strategy's holdings.
 #'
 #' @param x strategy
 #' @return strategy
@@ -888,6 +889,7 @@ compute_returns_yearly <- function(rets, what = 'product'){
 #' @param benchmark numeric, time series of benchmarks
 #' @param country character, country
 #' @return data frame, alpha and beta of the strategy
+#' @note #REV!2 JWP 2015-08-11
 #' @export
 compute_alphabeta <- function(rets, benchmark, country='US'){
   dtes_returns <- names(rets) %>% 
