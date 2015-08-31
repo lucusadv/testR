@@ -893,7 +893,7 @@ compute_returns_yearly <- function(rets, what = 'product'){
 #' @param benchmark numeric, time series of benchmarks
 #' @param country character, country
 #' @return data frame, alpha and beta of the strategy
-#' @note #REV!2 JWP 2015-08-11
+#' @note #REV!2 JWP 2015-08-11 | #REV!3 JWP 2015-08-31
 #' @export
 compute_alphabeta <- function(rets, benchmark, country='US'){
   dtes_returns <- names(rets) %>% 
@@ -908,7 +908,8 @@ compute_alphabeta <- function(rets, benchmark, country='US'){
   numdays <- numTD(min(A$date), max(A$date), country=country)
   period <- numdays / nrow(rets)
   tmp <- lm(ret ~ benchmark, data=A)$coefficients
-  data.frame(alpha = round(tmp[1]*252/period*100,2), beta = round(tmp[2], 2), row.names=FALSE)
+  data.frame(alpha = round(((1+tmp[1])^252/period-1)*100,2), 
+             beta = round(tmp[2], 2), row.names=FALSE)
 }
 
 #' Computes average annualized returns for a time series of returns.
