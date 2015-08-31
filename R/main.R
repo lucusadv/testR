@@ -19,6 +19,7 @@ beta_neutralize <- function(x, BETA, fraction, bench_id) UseMethod("beta_neutral
 #' @export
 get_betas <- function(x, y) UseMethod("get_betas")
 
+
 #' Computes performance of a strategy object.
 #'
 #' All strategy dates must be contained in the returns dates.
@@ -51,15 +52,16 @@ get_betas <- function(x, y) UseMethod("get_betas")
       tmp_portfolio <- work_portfolio[[d]]
       scaling_factor <- ifelse(d > dtes_start, sum(abs(tmp_portfolio))/sum(abs(PORT[[d]])), 1)
       work_portfolio[[d]] <- scaling_factor * PORT[[d]]
-      turnover[d] <- sum(abs(opVectors(work_portfolio[[d]], tmp_portfolio, FUN=`-`))) / sum(abs(tmp_portfolio))
+      turnover[d] <- sum(abs(opVectors(work_portfolio[[d]], tmp_portfolio, FUN=`-`))) / 
+        sum(abs(tmp_portfolio))
     }
-    pnl[d] <- opVectors(work_portfolio[[d]], R[d, ], FUN = `*`) %>% sum(na.rm=TRUE)
+    # browser()
+    pnl[d] <- sum(work_portfolio[[d]] * R[d, names(work_portfolio[[d]])] )
     if (is.na(pnl[d])) stop('missing dates')
     if (d < dtes_end){
       d_next <- succ(d, dtes)
-      v <- R[d, ] + 1
-      v[is.na(v)] <- 1
-      work_portfolio[[d_next]] <- opVectors(work_portfolio[[d]], v, FUN=`*`)
+      v <- R[d, names(work_portfolio[[d]])] + 1
+      work_portfolio[[d_next]] <- work_portfolio[[d]]*v
     }
   }
   # creates adjusted pnl. I am using an approximate number of trading days in
@@ -312,10 +314,16 @@ backtest <- function(X, RETS, shortfall=0, borrow=0){
                 RETS = RETS, 
                 shortfall = shortfall, 
                 borrow = borrow)
-  ret      <- lapply(X, '[[', 'ret')      %>% do.call(cbind, .)
-  ret_adj  <- lapply(X, '[[', 'ret_adj')  %>% do.call(cbind, .)
-  turnover <- lapply(X, '[[', 'turnover') %>% do.call(cbind, .)
-  list(ret = ret, ret_adj=ret_adj, turnover = turnover)
+  ret <- lapply(X, '[[', 'ret') %>% 
+    do.call(cbind, .) %>% 
+    set_axes(c('date', 'id'))
+  ret_adj <- lapply(X, '[[', 'ret_adj') %>% 
+    do.call(cbind, .) %>% 
+    set_axes(c('date', 'id'))
+  turnover <- lapply(X, '[[', 'turnover') %>% 
+    do.call(cbind, .) %>% 
+    set_axes(c('date', 'id'))
+   list(ret = ret, ret_adj=ret_adj, turnover = turnover)
 }
 
 
@@ -844,7 +852,7 @@ compute_returns_monthly <- function(rets, what = 'product'){
     {x <- data.frame(matrix(.$ret, nrow=1)); names(x) <- .$date;x}
 }
 
-#' Computes annual returns of a strategy. It is stronly recommended that this be
+#' Computes annual returns of a strategy for each year. It is stronly recommended that this be
 #' run on daily backtests, although the function will run on monthly backtests.
 #'
 #' @param rets numeric, vector of returns, element names are dates in format
@@ -897,20 +905,24 @@ compute_alphabeta <- function(rets, benchmark, country='US'){
   data.frame(alpha = round(tmp[1]*252/period*100,2), beta = round(tmp[2], 2), row.names=FALSE)
 }
 
-#' Computes average annualized returns for a time series of returns.
-#'
+#' Computes average average returns for a time series of returns. The default is
+#' annualized, but it can be changed through the horizon parameter.
+#' 
 #' @param rets numeric, vector of returns, element names are dates in format 
 #'   YYYY-MM-DD
 #' @param startDate character, earliest date, if specified
 #' @param endDate character, latest date, if specified
+#' @param horizon numeric, number of trading dates over which the return is 
+#'   computed. Use 252 for yearly returns, 126 for half-year, 63 for quarterly, 
+#'   21 for monthly
 #' @return data frame, annual returns
 #' @export
-compute_returns <- function(r, startDate=NULL, endDate=NULL, country='US'){
+compute_returns <- function(r, startDate=NULL, endDate=NULL, horizon=252, country='US'){
   if (!is.null(startDate)) r <- r[names(r) >= startDate]
   if (!is.null(endDate))   r <- r[names(r) <= startDate]
   dte_start <- min(names(r))
   dte_end   <- max(names(r))
-  n <- 252/length(getTD(dte_start, dte_end, country=country))
+  n <- horizon / length(getTD(dte_start, dte_end, country=country))
   data.frame(return=round(100*(prod(r + 1)^n - 1), 2))
 }
 
@@ -946,7 +958,7 @@ rademacher <- function(X=NULL, n=1e4L, delta=1e-3, period=12){
   bounds <- (R + 2*a_range*sqrt(log(1/delta)/2/nperiods) + 2/nperiods/a_range)
   bestbound <- min(bounds)*scaling_factor
   #   cutoff <- a_range[BOUND==min(bounds)]
-  estim <- apply(X_norm,2,mean)*scaling_factor
+  estim <- apply(X_norm * X_SIGN, 2, mean)*scaling_factor
   list(SR=estim, bound=bestbound)
 }
 
