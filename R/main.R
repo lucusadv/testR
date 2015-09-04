@@ -747,6 +747,7 @@ compute_daterange <- function(r){
 #' @param endDate character, latest date, if specified
 #' @return a data frame containing drawdown (in percentage points), its start
 #' and end dates
+#' @note #REV!3 JWP 2015-09-01
 #' @export
 compute_drawdown <- function(r, startDate=NULL, endDate=NULL){
   if (!is.null(startDate)) r <- r[names(r) >= startDate]
@@ -790,6 +791,9 @@ compute_drawdown <- function(r, startDate=NULL, endDate=NULL){
 #' @param endDate character, latest date, if specified
 #' @author G.A.Paleologo
 #' @return numeric, sharpe ratio computed as mean(r)/sd(r)*sqrt(period)
+#' @details Assumes returns are IID and follow a Wiener process. For more 
+#' details, see Lo, Andrew. 2002. "The Statistics of Sharpe Ratios".
+#' @note #REV!3 JWP 2015-09-01
 #' @export
 compute_sharpe <- function(rets, period=1, volAdjPeriod=NULL,
                            startDate=NULL, endDate=NULL){
@@ -797,7 +801,9 @@ compute_sharpe <- function(rets, period=1, volAdjPeriod=NULL,
     rets <- zoo(rets, as.Date(names(rets)))
     rets <- rollapply(rets, volAdjPeriod, function(x)
       x[floor(length(x))/2]/sd(x, na.rm=T), align='center')
-  }
+  } #??! Doesn't align center mean that if your volAdjPeriod is 5, then the 
+  # vol-adj return for day t is calculated using the returns from t-2 to **t+2** 
+  # leading to look-ahead bias?
   if (!is.null(startDate)) rets <- rets[names(rets) >= startDate]
   if (!is.null(endDate)) rets <- rets[names(rets) <= startDate]
   SR <- (mean(rets, na.rm=TRUE) / sd(rets, na.rm=TRUE) * sqrt(252/period)) %>% round(2)
@@ -908,8 +914,7 @@ compute_alphabeta <- function(rets, benchmark, country='US'){
   numdays <- numTD(min(A$date), max(A$date), country=country)
   period <- numdays / nrow(rets)
   tmp <- lm(ret ~ benchmark, data=A)$coefficients
-  data.frame(alpha = round(((1+tmp[1])^252/period-1)*100,2), 
-             beta = round(tmp[2], 2), row.names=FALSE)
+  data.frame(alpha = round(tmp[1]*252/period*100,2), beta = round(tmp[2], 2), row.names=FALSE)
 }
 
 #' Computes average annualized returns for a time series of returns.

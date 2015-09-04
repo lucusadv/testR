@@ -10,7 +10,8 @@
 #' @param bench_id character, id of the benchmark
 #' @return a matrix
 #' @note #REV!1 JWP 2015-08-10 | #REV!2 JWP 2015-08-10
-#'   
+#' @details Assumes that the expected daily returns of the assets (including 
+#' the benchmark) are equal to 0.   
 #' @author G.A.Paleologo
 #' @export
 estimate_beta <- function(R, BETA=NULL, halflife=126, width=253, bench_id="78462F103"){
@@ -39,10 +40,10 @@ estimate_beta <- function(R, BETA=NULL, halflife=126, width=253, bench_id="78462
     w_temp <- w[( width - width_effective + 1 ):width]
     R_temp <- R[ind,, drop = FALSE]
     bench_R_temp <- bench_R[ind]
-    var_bench_temp <- sum(w_temp * bench_R_temp^2, na.rm=TRUE) / sum(w_temp*!is.na(bench_R_temp)) #??! This assumes that the E[bench_R] = 0, correct?
+    var_bench_temp <- sum(w_temp * bench_R_temp^2, na.rm=TRUE) / sum(w_temp*!is.na(bench_R_temp))
     BETA_est[d, ] <- apply(R_temp, 2, function(x) {
       tmp <- w_temp * x * bench_R_temp
-      sum(tmp, na.rm = T) / sum( w_temp * !is.na(tmp)) #??! This assumes that the E[x] = 0, correct?
+      sum(tmp, na.rm = T) / sum( w_temp * !is.na(tmp))
       }) / var_bench_temp
   }
   # smooths BETA over 5 days to reduce impact of new observations
@@ -67,7 +68,7 @@ estimate_beta <- function(R, BETA=NULL, halflife=126, width=253, bench_id="78462
 #'   are used
 #' @return a data frame with fields date (format YYYY-MM-DD), id, and raw
 #'   loadings
-#' @note #REV!2 JWP 2015-08-11   
+#' @note #REV!2 JWP 2015-08-11 | #REV_OLD!   
 #' @author G.A.Paleologo
 #' @export
 estimate_momentum <- function(R, width = 253, bench_id = "78462F103"){
