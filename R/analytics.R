@@ -78,10 +78,10 @@ estimate_momentum <- function(R, width = 253, bench_id = "78462F103"){
     R %<>% apply(2, function(x) x - spy )
   }
   R %<>% {.[is.na(.)] <- 0; .} %>% {. + 1} %>% 
-    apply(2, cumprod) %>% {. - 1}
+    apply(2, cumprod) 
   R_dates <- getDates(R)
   ndates <- nrow(R)
-  MOME_est <- R[-1:-width, ] / R[1:(ndates - width)]
+  MOME_est <- R[-1:-width, ] / R[1:(ndates - width), ]
   # smooths momentum est over 5 days to reduce impact of new observations
   MOME_est <-  ( tail(MOME_est, -5) + 
                    tail(head(MOME_est, -1), -4) + 
