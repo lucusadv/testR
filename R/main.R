@@ -306,7 +306,7 @@ summary.strategy <- function(data){
 #' @param shortfall numeric expected shortfall (e.g. 0.20 = 20 bps)
 #' @param borrow numeric borrow costs (e.g. 0.5 = 0.5%/yrs)
 #' @return list of performance objects
-#'
+#' @note #REV!1 JWP 2015-09-09
 #' @export
 #'
 backtest <- function(X, RETS, shortfall=0, borrow=0){
@@ -889,7 +889,7 @@ compute_returns_yearly <- function(rets, what = 'product'){
 #' @param benchmark numeric, time series of benchmarks
 #' @param country character, country
 #' @return data frame, alpha and beta of the strategy
-#' @note #REV!2 JWP 2015-08-11
+#' @note #REV!2 JWP 2015-08-11 | #REV!3 JWP 2015-09-09
 #' @export
 compute_alphabeta <- function(rets, benchmark, country='US'){
   dtes_returns <- names(rets) %>% 
